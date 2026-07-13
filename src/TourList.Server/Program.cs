@@ -98,6 +98,7 @@ builder.Services.AddHttpClient<IGeocoder, AzureMapsGeocoder>((sp, client) =>
 builder.Services.AddScoped<EntryService>();
 builder.Services.AddScoped<RouteService>();
 builder.Services.AddScoped<RouteMergeService>();
+builder.Services.AddScoped<AdminUserService>();
 
 // Azure Communication Services email (password recovery); logs the link when not configured.
 builder.Services.AddOptions<AcsEmailOptions>()

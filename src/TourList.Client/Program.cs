@@ -26,6 +26,7 @@ builder.Services.AddScoped<TourAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<TourAuthStateProvider>());
 
 builder.Services.AddScoped<CatalogApi>();
+builder.Services.AddScoped<AdminApi>();
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddTransient<MapInterop>(); // component-owned JS module; disposed by Map.razor
 

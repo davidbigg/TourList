@@ -1,0 +1,100 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = RoleNames.Admin)]
+@inject AdminApi Admin
+
+<PageTitle>TourList · Users</PageTitle>
+
+<div class="page">
+    <div class="page-card surface">
+        <div class="page-head">
+            <div>
+                <div class="t">Users</div>
+                <div class="m">@(_users?.Count ?? 0) user@(_users?.Count == 1 ? "" : "s")</div>
+            </div>
+            <div class="nav">
+                <a href="/admin/lists">Content</a>
+                <a href="/account">Account</a>
+            </div>
+        </div>
+        <div class="page-body">
+            @if (_message is not null)
+            {
+                <div class="err">@_message</div>
+            }
+            @if (_users is null)
+            {
+                <div class="empty">Loading…</div>
+            }
+            else
+            {
+                @foreach (var user in _users)
+                {
+                    <div class="routecard" @key="user.Id">
+                        <div class="rt">
+                            <div class="a1">
+                                @user.Email
+                                @if (user.IsAdmin)
+                                {
+                                    <span class="badge located">Admin</span>
+                                }
+                                @if (!user.IsActive)
+                                {
+                                    <span class="badge unlocatable">Inactive</span>
+                                }
+                            </div>
+                            <div class="a2">@user.RouteCount route@(user.RouteCount == 1 ? "" : "s")</div>
+                        </div>
+                        <div class="ord">
+                            @if (user.IsAdmin)
+                            {
+                                <button class="btn" disabled="@_busy" @onclick="() => Act(user.Id, Admin.DemoteAsync)">Demote</button>
+                            }
+                            else
+                            {
+                                <button class="btn" disabled="@_busy" @onclick="() => Act(user.Id, Admin.PromoteAsync)">Promote</button>
+                            }
+                            @if (user.IsActive)
+                            {
+                                <button class="btn" disabled="@_busy" @onclick="() => Act(user.Id, Admin.DeactivateAsync)">Deactivate</button>
+                            }
+                            else
+                            {
+                                <button class="btn" disabled="@_busy" @onclick="() => Act(user.Id, Admin.ReactivateAsync)">Reactivate</button>
+                            }
+                            <button class="btn danger" disabled="@_busy" @onclick="() => Act(user.Id, Admin.RemoveUserAsync)">Remove</button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<AdminUserDto>? _users;
+    private string? _message;
+    private bool _busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync() => _users = (await Admin.GetUsersAsync()).ToList();
+
+    private async Task Act(Guid id, Func<Guid, Task<HttpResponseMessage>> action)
+    {
+        _busy = true;
+        _message = null;
+
+        using var response = await action(id);
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            _message = "Blocked: the system must always retain at least one active admin.";
+        }
+        else if (!response.IsSuccessStatusCode)
+        {
+            _message = $"Action failed ({(int)response.StatusCode}).";
+        }
+
+        await LoadAsync();
+        _busy = false;
+    }
+}

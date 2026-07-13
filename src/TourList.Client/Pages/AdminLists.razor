@@ -1,0 +1,199 @@
+@page "/admin/lists"
+@attribute [Authorize(Roles = RoleNames.Admin)]
+@inject AdminApi Admin
+
+<PageTitle>TourList · Content</PageTitle>
+
+<div class="page">
+    <div class="page-card surface">
+        <div class="page-head">
+            <div>
+                <div class="t">Content lists</div>
+                <div class="m">@(_lists?.Count ?? 0) list@(_lists?.Count == 1 ? "" : "s")</div>
+            </div>
+            <div class="nav">
+                <a href="/admin/users">Users</a>
+                <a href="/">Map</a>
+            </div>
+        </div>
+        <div class="page-body">
+            <div class="field row2">
+                <input class="input" placeholder="New list name" @bind="_newListName" @bind:event="oninput" />
+                <button class="btn pri" disabled="@(string.IsNullOrWhiteSpace(_newListName))" @onclick="CreateListAsync">Create list</button>
+            </div>
+
+            @if (_lists is null)
+            {
+                <div class="empty">Loading…</div>
+            }
+            else
+            {
+                @foreach (var list in _lists)
+                {
+                    <div class="routecard @(list.Id == _selectedListId ? "sel" : null)" @key="list.Id">
+                        <div class="rt" style="cursor:pointer" @onclick="() => SelectAsync(list.Id)">
+                            <div class="a1">@list.Name</div>
+                            <div class="a2">@list.EntryCount entr@(list.EntryCount == 1 ? "y" : "ies")</div>
+                        </div>
+                        <div class="ord">
+                            <button class="btn" @onclick="() => SelectAsync(list.Id)">Open</button>
+                            <button class="btn danger" @onclick="() => DeleteListAsync(list.Id)">Delete</button>
+                        </div>
+                    </div>
+                }
+            }
+
+            @if (_selectedListId is not null)
+            {
+                <div class="lbl section">Entries in “@SelectedName”</div>
+
+                <div class="field row2">
+                    <input class="input" placeholder="Address" @bind="_newAddress" @bind:event="oninput" />
+                    <input class="input" placeholder="Notes (optional)" @bind="_newNotes" @bind:event="oninput" />
+                </div>
+                <button class="btn pri" disabled="@(string.IsNullOrWhiteSpace(_newAddress))" @onclick="AddEntryAsync">Add entry</button>
+
+                <div class="lbl section">Import CSV (header: Address, optional Notes)</div>
+                <textarea class="input" rows="3" placeholder="Address,Notes&#10;123 Main St,Blue house" @bind="_csvText" @bind:event="oninput"></textarea>
+                <button class="btn" disabled="@(string.IsNullOrWhiteSpace(_csvText))" @onclick="ImportCsvAsync">Import</button>
+                @if (_importSummary is not null)
+                {
+                    <div class="muted">@_importSummary</div>
+                }
+
+                <div class="lbl section">Entries</div>
+                @if (_entries.Count == 0)
+                {
+                    <div class="empty">No entries yet.</div>
+                }
+                else
+                {
+                    @foreach (var entry in _entries)
+                    {
+                        <div class="routecard" @key="entry.Id">
+                            <div class="rt">
+                                <div class="a1">@entry.RawAddress <span class="badge @StatusClass(entry.GeocodeStatus)">@entry.GeocodeStatus</span></div>
+                                @if (!string.IsNullOrWhiteSpace(entry.Notes))
+                                {
+                                    <div class="a2">@entry.Notes</div>
+                                }
+                                @if (_locatingId == entry.Id)
+                                {
+                                    <div class="field row2" style="margin-top:8px">
+                                        <input class="input" type="number" step="any" placeholder="Latitude" @bind="_lat" />
+                                        <input class="input" type="number" step="any" placeholder="Longitude" @bind="_lng" />
+                                    </div>
+                                    <button class="btn pri" @onclick="() => SaveLocateAsync(entry.Id)">Save location</button>
+                                }
+                            </div>
+                            <div class="ord">
+                                @if (entry.GeocodeStatus != GeocodeStatus.Located)
+                                {
+                                    <button class="btn" @onclick="() => _locatingId = entry.Id">Locate</button>
+                                }
+                                <button class="btn danger" @onclick="() => DeleteEntryAsync(entry.Id)">Delete</button>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ListDto>? _lists;
+    private List<EntryDto> _entries = [];
+    private Guid? _selectedListId;
+    private string _newListName = "";
+    private string _newAddress = "";
+    private string? _newNotes;
+    private string _csvText = "";
+    private string? _importSummary;
+    private Guid? _locatingId;
+    private double? _lat;
+    private double? _lng;
+
+    private string SelectedName => _lists?.FirstOrDefault(l => l.Id == _selectedListId)?.Name ?? "";
+
+    protected override Task OnInitializedAsync() => LoadListsAsync();
+
+    private async Task LoadListsAsync() => _lists = (await Admin.GetListsAsync()).ToList();
+
+    private async Task CreateListAsync()
+    {
+        await Admin.CreateListAsync(_newListName.Trim());
+        _newListName = "";
+        await LoadListsAsync();
+    }
+
+    private async Task DeleteListAsync(Guid id)
+    {
+        await Admin.DeleteListAsync(id);
+        if (_selectedListId == id)
+        {
+            _selectedListId = null;
+            _entries = [];
+        }
+        await LoadListsAsync();
+    }
+
+    private async Task SelectAsync(Guid id)
+    {
+        _selectedListId = id;
+        _locatingId = null;
+        _importSummary = null;
+        _entries = (await Admin.GetEntriesAsync(id)).ToList();
+    }
+
+    private async Task AddEntryAsync()
+    {
+        await Admin.AddEntryAsync(_selectedListId!.Value, _newAddress.Trim(), _newNotes);
+        _newAddress = "";
+        _newNotes = null;
+        await RefreshAsync();
+    }
+
+    private async Task ImportCsvAsync()
+    {
+        var result = await Admin.ImportCsvAsync(_selectedListId!.Value, _csvText, "import.csv");
+        _importSummary = result is null
+            ? "Import failed (check the header row)."
+            : $"Imported {result.Summary.Imported}, flagged {result.Summary.GeocodeFailures}, bad rows {result.Summary.ParseFailures}, dupes {result.Summary.DuplicateWarnings}.";
+        _csvText = "";
+        await RefreshAsync();
+    }
+
+    private async Task DeleteEntryAsync(Guid id)
+    {
+        await Admin.DeleteEntryAsync(id);
+        await RefreshAsync();
+    }
+
+    private async Task SaveLocateAsync(Guid id)
+    {
+        if (_lat is { } lat && _lng is { } lng)
+        {
+            await Admin.LocateAsync(id, lat, lng);
+        }
+        _locatingId = null;
+        _lat = _lng = null;
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (_selectedListId is { } id)
+        {
+            _entries = (await Admin.GetEntriesAsync(id)).ToList();
+        }
+        await LoadListsAsync();
+    }
+
+    private static string StatusClass(GeocodeStatus status) => status switch
+    {
+        GeocodeStatus.Located => "located",
+        GeocodeStatus.Unlocatable => "unlocatable",
+        _ => "pending",
+    };
+}

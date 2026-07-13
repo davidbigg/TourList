@@ -18,7 +18,7 @@
                     <div class="a1">@context.User.Identity?.Name</div>
                     @if (context.User.IsInRole(RoleNames.Admin))
                     {
-                        <div class="muted">Administrator · <a href="/admin/lists">Manage content</a></div>
+                        <div class="muted">Administrator · <a href="/admin/users">Users</a> · <a href="/admin/lists">Content</a></div>
                     }
                 </Authorized>
                 <NotAuthorized>
