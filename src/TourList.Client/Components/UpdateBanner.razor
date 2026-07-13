@@ -1,0 +1,39 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@if (_available)
+{
+    <div class="update-banner surface">
+        <span>A new version of TourList is available.</span>
+        <button class="btn pri sm" @onclick="ReloadAsync">Reload</button>
+    </div>
+}
+
+@code {
+    private bool _available;
+    private DotNetObjectReference<UpdateBanner>? _ref;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ref = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("tourlistPwa.onUpdateAvailable", _ref);
+        }
+    }
+
+    [JSInvokable]
+    public void OnUpdateAvailable()
+    {
+        _available = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ReloadAsync() => await JS.InvokeVoidAsync("tourlistPwa.applyUpdate");
+
+    public ValueTask DisposeAsync()
+    {
+        _ref?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

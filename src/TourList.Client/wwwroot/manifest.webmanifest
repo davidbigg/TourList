@@ -1,22 +1,26 @@
 {
-  "name": "TourList.Client",
-  "short_name": "TourList.Client",
+  "name": "TourList",
+  "short_name": "TourList",
+  "description": "Curated address lists on a map — build and drive ordered routes, offline-friendly.",
   "id": "./",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#03173d",
+  "orientation": "portrait-primary",
+  "background_color": "#11161d",
+  "theme_color": "#11161d",
   "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     }
   ]
 }
