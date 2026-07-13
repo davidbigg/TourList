@@ -199,6 +199,52 @@ html, body {
     .listpanel .ph { padding: 4px 16px 12px; }
 }
 
+/* ---- entries-card footer + entry actions ---- */
+.listpanel .cf { padding: 11px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.details .dactions { margin-top: 14px; display: flex; gap: 8px; }
+.details .hint { font-size: 11.5px; color: var(--card-sub); }
+.btn.danger { color: #f87171; border-color: rgba(248,113,113,.3); }
+.btn:disabled { opacity: .5; cursor: default; }
+
+/* ---- non-map pages (/build, /routes) ---- */
+.page { position: fixed; inset: 0; overflow: auto; display: flex; justify-content: center; padding: 24px 16px; background: var(--land2); }
+.page-card { width: min(560px, 100%); align-self: flex-start; border-radius: var(--radius); display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
+.page-head { padding: 15px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.page-head .t { font-weight: 700; font-size: 17px; }
+.page-head .m { font-size: 11.5px; color: var(--card-sub); margin-top: 2px; }
+.page-head .nav { display: flex; gap: 14px; }
+.page-head .nav a { color: var(--accent-strong); text-decoration: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+.page-body { padding: 16px 18px; overflow: auto; flex: 1; }
+.page-foot { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+.field { display: block; margin-bottom: 14px; }
+.field.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field .lbl { margin-bottom: 5px; }
+.lbl { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--card-sub); }
+.lbl.section { margin: 6px 0 8px; font-size: 11px; }
+.input { width: 100%; background: color-mix(in srgb, var(--card-solid) 60%, transparent); border: 1px solid var(--border); border-radius: var(--btn-radius); padding: 9px 11px; color: var(--card-fg); font-family: inherit; font-size: 13.5px; }
+.input:focus { outline: none; border-color: var(--accent); }
+.empty a { color: var(--accent-strong); }
+
+/* stop list */
+.stoplist { display: flex; flex-direction: column; gap: 6px; }
+.stop { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: var(--btn-radius); background: color-mix(in srgb, var(--card-solid) 40%, transparent); }
+.stop .drag { cursor: grab; color: var(--card-sub); font-size: 15px; }
+.stop .n { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); display: grid; place-items: center; font-weight: 700; font-size: 11.5px; }
+.stop .rt { flex: 1; min-width: 0; }
+.stop .a1 { font-size: 13px; font-weight: 600; }
+.stop .a2 { font-size: 11px; color: var(--card-sub); margin-top: 2px; }
+.stop .ord { display: flex; gap: 4px; }
+.stopbtn { border: 1px solid var(--border); background: transparent; color: var(--card-fg); border-radius: 7px; width: 26px; height: 26px; cursor: pointer; font-size: 11px; }
+.stopbtn:disabled { opacity: .35; cursor: default; }
+.stopbtn.danger { color: #f87171; }
+
+/* route library */
+.routecard { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: var(--radius); margin-bottom: 8px; }
+.routecard .rt { flex: 1; min-width: 0; }
+.routecard .a1 { font-weight: 700; font-size: 14px; }
+.routecard .a2 { font-size: 11.5px; color: var(--card-sub); margin-top: 2px; }
+.routecard .ord { display: flex; gap: 6px; }
+
 /* ===== template chrome kept from scaffold ===== */
 #blazor-error-ui {
     color-scheme: light only; background: lightyellow; bottom: 0; box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);

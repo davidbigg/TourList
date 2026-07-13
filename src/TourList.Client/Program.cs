@@ -14,4 +14,8 @@ builder.Services.AddScoped<CatalogApi>();
 builder.Services.AddScoped<ThemeService>();
 builder.Services.AddTransient<MapInterop>(); // component-owned JS module; disposed by Map.razor
 
+// Route building (guest/local for now; an auth-aware router replaces LocalRouteStore in M5).
+builder.Services.AddScoped<IRouteStore, LocalRouteStore>();
+builder.Services.AddScoped<RouteBuilderState>();
+
 await builder.Build().RunAsync();

@@ -1,0 +1,81 @@
+@page "/routes"
+@inject IRouteStore Routes
+@inject RouteBuilderState Builder
+@inject NavigationManager Nav
+
+<PageTitle>TourList · My routes</PageTitle>
+
+<div class="page">
+    <div class="page-card surface">
+        <div class="page-head">
+            <div>
+                <div class="t">My routes</div>
+                <div class="m">@(_routes is null ? "Loading…" : $"{_routes.Count} saved on this device")</div>
+            </div>
+            <div class="nav">
+                <a href="/">Map</a>
+                <a href="/build" @onclick:preventDefault @onclick="StartNew">New</a>
+            </div>
+        </div>
+
+        <div class="page-body">
+            @if (_routes is null)
+            {
+                <div class="empty">Loading…</div>
+            }
+            else if (_routes.Count == 0)
+            {
+                <div class="empty">No saved routes yet. Build one from the <a href="/">map</a>.</div>
+            }
+            else
+            {
+                @foreach (var route in _routes)
+                {
+                    <div class="routecard" @key="route.Id">
+                        <div class="rt">
+                            <div class="a1">@route.Name</div>
+                            <div class="a2">@route.Stops.Count stop@(route.Stops.Count == 1 ? "" : "s") · start: @StartLabel(route)</div>
+                        </div>
+                        <div class="ord">
+                            <button class="btn" @onclick="() => Edit(route)">Edit</button>
+                            <button class="btn danger" @onclick="() => DeleteAsync(route.Id)">Delete</button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<RouteDto>? _routes;
+
+    private async Task LoadAsync() => _routes = (await Routes.GetAllAsync()).OrderByDescending(r => r.UpdatedUtc).ToList();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private void StartNew()
+    {
+        Builder.Clear();
+        Nav.NavigateTo("/build");
+    }
+
+    private void Edit(RouteDto route)
+    {
+        Builder.LoadForEdit(route);
+        Nav.NavigateTo("/build");
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        await Routes.DeleteAsync(id);
+        await LoadAsync();
+    }
+
+    private static string StartLabel(RouteDto route) => route.StartPointType switch
+    {
+        StartPointType.Stop => "a stop",
+        StartPointType.Manual => "manual",
+        _ => "current location",
+    };
+}

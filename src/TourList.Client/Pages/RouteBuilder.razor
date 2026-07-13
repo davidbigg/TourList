@@ -1,0 +1,116 @@
+@page "/build"
+@implements IDisposable
+@inject RouteBuilderState Builder
+@inject IRouteStore Routes
+@inject NavigationManager Nav
+
+<PageTitle>TourList · Build route</PageTitle>
+
+<div class="page">
+    <div class="page-card surface">
+        <div class="page-head">
+            <div>
+                <div class="t">@(Builder.EditingRouteId is null ? "Build route" : "Edit route")</div>
+                <div class="m">@Builder.Count stop@(Builder.Count == 1 ? "" : "s")</div>
+            </div>
+            <div class="nav">
+                <a href="/">Map</a>
+                <a href="/routes">My routes</a>
+            </div>
+        </div>
+
+        <div class="page-body">
+            <label class="field">
+                <span class="lbl">Route name</span>
+                <input class="input" placeholder="e.g. Autumn options loop" @bind="Builder.Name" @bind:event="oninput" />
+            </label>
+
+            <label class="field">
+                <span class="lbl">Start point</span>
+                <select class="input" @bind="_startType">
+                    <option value="@StartPointType.CurrentLocation">Current location (default)</option>
+                    <option value="@StartPointType.Stop">Start from a stop</option>
+                    <option value="@StartPointType.Manual">Manual coordinates</option>
+                </select>
+            </label>
+
+            @if (Builder.StartPointType == StartPointType.Stop && Builder.Count > 0)
+            {
+                <label class="field">
+                    <span class="lbl">Which stop</span>
+                    <select class="input" @bind="_startStopId">
+                        @foreach (var (stop, i) in Builder.Stops.Select((s, idx) => (s, idx)))
+                        {
+                            <option value="@stop.Id">@(i + 1). @stop.SnapshotAddress</option>
+                        }
+                    </select>
+                </label>
+            }
+            else if (Builder.StartPointType == StartPointType.Manual)
+            {
+                <div class="field row2">
+                    <label><span class="lbl">Latitude</span><input class="input" type="number" step="any" @bind="Builder.StartLatitude" /></label>
+                    <label><span class="lbl">Longitude</span><input class="input" type="number" step="any" @bind="Builder.StartLongitude" /></label>
+                </div>
+            }
+
+            <div class="lbl section">Stops</div>
+            @if (Builder.Count == 0)
+            {
+                <div class="empty">No stops yet. Add entries from the <a href="/">map</a> (open an entry → “Add to route”).</div>
+            }
+            else
+            {
+                <StopList Stops="Builder.Stops"
+                          OnRemove="id => { Builder.Remove(id); }"
+                          OnMoveUp="id => { Builder.Move(id, -1); }"
+                          OnMoveDown="id => { Builder.Move(id, 1); }"
+                          OnReorder="args => { Builder.ReorderByIndex(args.OldIndex, args.NewIndex); }" />
+            }
+        </div>
+
+        <div class="page-foot">
+            <button class="btn" @onclick="Cancel">Discard</button>
+            <button class="btn pri" disabled="@(Builder.Count == 0 || _saving)" @onclick="SaveAsync">
+                @(_saving ? "Saving…" : "Save route")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _saving;
+
+    private StartPointType _startType
+    {
+        get => Builder.StartPointType;
+        set => Builder.StartPointType = value;
+    }
+
+    private Guid? _startStopId
+    {
+        get => Builder.StartStopId ?? Builder.Stops.FirstOrDefault()?.Id;
+        set => Builder.StartStopId = value;
+    }
+
+    protected override void OnInitialized() => Builder.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        var route = Builder.BuildRoute();
+        await Routes.SaveAsync(route);
+        Builder.Clear();
+        Nav.NavigateTo("/routes");
+    }
+
+    private void Cancel()
+    {
+        Builder.Clear();
+        Nav.NavigateTo("/");
+    }
+
+    public void Dispose() => Builder.Changed -= OnChanged;
+}

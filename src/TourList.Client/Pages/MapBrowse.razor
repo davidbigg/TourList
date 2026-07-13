@@ -2,6 +2,8 @@
 @implements IDisposable
 @inject CatalogApi Catalog
 @inject ThemeService Theme
+@inject RouteBuilderState Builder
+@inject NavigationManager Nav
 
 <PageTitle>TourList</PageTitle>
 
@@ -72,6 +74,10 @@
                 }
             }
         </div>
+        <div class="cf">
+            <button class="btn pri" @onclick='() => Nav.NavigateTo("/build")'>Build route (@Builder.Count)</button>
+            <button class="btn" @onclick='() => Nav.NavigateTo("/routes")'>My routes</button>
+        </div>
     </aside>
 
     @if (_selected is not null)
@@ -98,6 +104,21 @@
                 <div>@ListNameFor(_selected.ListId)</div>
                 <div class="lbl">Status</div>
                 <div><span class="badge @StatusClass(_selected.GeocodeStatus)">@_selected.GeocodeStatus</span></div>
+
+                <div class="dactions">
+                    @if (_selected.Latitude is null || _selected.Longitude is null)
+                    {
+                        <span class="hint">Not located — can't add to a route.</span>
+                    }
+                    else if (Builder.Contains(_selected.Id))
+                    {
+                        <button class="btn" disabled>✓ In route</button>
+                    }
+                    else
+                    {
+                        <button class="btn pri" @onclick="AddSelectedToRoute">Add to route</button>
+                    }
+                </div>
             </div>
         </div>
     }
@@ -117,6 +138,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Builder.Changed += OnBuilderChanged;
         _lists = (await Catalog.GetListsAsync()).ToList();
         for (var i = 0; i < _lists.Count; i++)
         {
@@ -205,5 +227,20 @@
         _ => "pending",
     };
 
-    public void Dispose() => _debounceCts?.Cancel();
+    private void AddSelectedToRoute()
+    {
+        if (_selected is not null)
+        {
+            Builder.AddEntry(_selected);
+            _selected = null; // return to the list so the next stop can be picked
+        }
+    }
+
+    private void OnBuilderChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Builder.Changed -= OnBuilderChanged;
+        _debounceCts?.Cancel();
+    }
 }

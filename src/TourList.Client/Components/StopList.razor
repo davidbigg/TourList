@@ -1,0 +1,68 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="stoplist" @ref="_el">
+    @foreach (var (stop, i) in Stops.Select((s, idx) => (s, idx)))
+    {
+        <div class="stop" @key="stop.Id" data-id="@stop.Id">
+            <span class="drag" title="Drag to reorder">⠿</span>
+            <span class="n">@(i + 1)</span>
+            <div class="rt">
+                <div class="a1">@stop.SnapshotAddress</div>
+                @if (!string.IsNullOrWhiteSpace(stop.SnapshotNotes))
+                {
+                    <div class="a2">@stop.SnapshotNotes</div>
+                }
+            </div>
+            <div class="ord">
+                <button class="stopbtn" disabled="@(i == 0)" title="Move up" @onclick="() => OnMoveUp.InvokeAsync(stop.Id)">▲</button>
+                <button class="stopbtn" disabled="@(i == Stops.Count - 1)" title="Move down" @onclick="() => OnMoveDown.InvokeAsync(stop.Id)">▼</button>
+                <button class="stopbtn danger" title="Remove" @onclick="() => OnRemove.InvokeAsync(stop.Id)">✕</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<RouteStopDto> Stops { get; set; } = [];
+    [Parameter] public EventCallback<Guid> OnRemove { get; set; }
+    [Parameter] public EventCallback<Guid> OnMoveUp { get; set; }
+    [Parameter] public EventCallback<Guid> OnMoveDown { get; set; }
+    [Parameter] public EventCallback<(int OldIndex, int NewIndex)> OnReorder { get; set; }
+
+    private ElementReference _el;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<StopList>? _ref;
+    private bool _inited;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_inited)
+        {
+            _inited = true;
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/sortable-interop.js");
+            _ref = DotNetObjectReference.Create(this);
+            await _module.InvokeAsync<bool>("init", _el, _ref);
+        }
+    }
+
+    [JSInvokable]
+    public Task OnDragReorder(int oldIndex, int newIndex) => OnReorder.InvokeAsync((oldIndex, newIndex));
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("dispose", _el);
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _ref?.Dispose();
+    }
+}
