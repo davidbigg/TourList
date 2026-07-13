@@ -16,6 +16,10 @@
             <div class="nav">
                 <a href="/">Map</a>
                 <a href="/build" @onclick:preventDefault @onclick="StartNew">New</a>
+                <AuthorizeView>
+                    <Authorized><a href="/account">Account</a></Authorized>
+                    <NotAuthorized><a href="/login">Log in</a></NotAuthorized>
+                </AuthorizeView>
             </div>
         </div>
 

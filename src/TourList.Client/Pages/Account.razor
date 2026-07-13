@@ -1,0 +1,49 @@
+@page "/account"
+@inject AuthApi Auth
+@inject TourAuthStateProvider AuthState
+@inject NavigationManager Nav
+
+<PageTitle>TourList · Account</PageTitle>
+
+<div class="page">
+    <div class="page-card surface">
+        <div class="page-head">
+            <div class="t">Account</div>
+            <div class="nav"><a href="/">Map</a><a href="/routes">My routes</a></div>
+        </div>
+        <div class="page-body">
+            <AuthorizeView>
+                <Authorized>
+                    <div class="lbl">Signed in as</div>
+                    <div class="a1">@context.User.Identity?.Name</div>
+                    @if (context.User.IsInRole(RoleNames.Admin))
+                    {
+                        <div class="muted">Administrator · <a href="/admin/lists">Manage content</a></div>
+                    }
+                </Authorized>
+                <NotAuthorized>
+                    <div class="muted">You're browsing as a guest. <a href="/login">Log in</a> or <a href="/register">create an account</a> to sync your routes across devices.</div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+        <div class="page-foot">
+            <AuthorizeView>
+                <Authorized>
+                    <button class="btn" disabled="@_busy" @onclick="LogoutAsync">@(_busy ? "…" : "Log out")</button>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _busy;
+
+    private async Task LogoutAsync()
+    {
+        _busy = true;
+        await Auth.LogoutAsync();
+        AuthState.NotifyChanged();
+        Nav.NavigateTo("/");
+    }
+}

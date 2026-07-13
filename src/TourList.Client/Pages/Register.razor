@@ -1,0 +1,61 @@
+@page "/register"
+@inject AuthApi Auth
+@inject TourAuthStateProvider AuthState
+@inject GuestMigrationService Migration
+@inject NavigationManager Nav
+
+<PageTitle>TourList · Register</PageTitle>
+
+<div class="page">
+    <div class="page-card surface">
+        <div class="page-head">
+            <div class="t">Create account</div>
+            <div class="nav"><a href="/">Map</a></div>
+        </div>
+        <div class="page-body">
+            <label class="field">
+                <span class="lbl">Email</span>
+                <input class="input" type="email" autocomplete="username" @bind="_email" @bind:event="oninput" />
+            </label>
+            <label class="field">
+                <span class="lbl">Password</span>
+                <input class="input" type="password" autocomplete="new-password" @bind="_password" @bind:event="oninput" />
+                <span class="muted">At least 8 characters.</span>
+            </label>
+            @if (_error is not null)
+            {
+                <div class="err">@_error</div>
+            }
+            <div class="muted">Already have an account? <a href="/login">Log in</a></div>
+        </div>
+        <div class="page-foot">
+            <button class="btn pri" disabled="@_busy" @onclick="SubmitAsync">@(_busy ? "Creating…" : "Create account")</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        var (ok, error) = await Auth.RegisterAsync(_email, _password);
+        if (ok)
+        {
+            AuthState.NotifyChanged();
+            await Migration.MigrateIfNeededAsync(); // uploads any guest routes built before signup
+            Nav.NavigateTo("/routes");
+        }
+        else
+        {
+            _error = error ?? "Registration failed.";
+            _busy = false;
+        }
+    }
+}

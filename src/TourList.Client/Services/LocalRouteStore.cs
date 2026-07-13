@@ -36,6 +36,13 @@ public sealed class LocalRouteStore(IJSRuntime js) : IRouteStore, IAsyncDisposab
         await module.InvokeVoidAsync("del", Store, id.ToString());
     }
 
+    /// <summary>Clears all guest routes (after a successful merge into an account).</summary>
+    public async Task ClearAllAsync()
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("clear", Store);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_module is not null)

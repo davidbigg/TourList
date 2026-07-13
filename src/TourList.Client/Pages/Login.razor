@@ -1,0 +1,59 @@
+@page "/login"
+@inject AuthApi Auth
+@inject TourAuthStateProvider AuthState
+@inject GuestMigrationService Migration
+@inject NavigationManager Nav
+
+<PageTitle>TourList · Log in</PageTitle>
+
+<div class="page">
+    <div class="page-card surface">
+        <div class="page-head">
+            <div class="t">Log in</div>
+            <div class="nav"><a href="/">Map</a></div>
+        </div>
+        <div class="page-body">
+            <label class="field">
+                <span class="lbl">Email</span>
+                <input class="input" type="email" autocomplete="username" @bind="_email" @bind:event="oninput" />
+            </label>
+            <label class="field">
+                <span class="lbl">Password</span>
+                <input class="input" type="password" autocomplete="current-password" @bind="_password" @bind:event="oninput" />
+            </label>
+            @if (_error is not null)
+            {
+                <div class="err">@_error</div>
+            }
+            <div class="muted">No account? <a href="/register">Register</a> · <a href="/forgot-password">Forgot password?</a></div>
+        </div>
+        <div class="page-foot">
+            <button class="btn pri" disabled="@_busy" @onclick="SubmitAsync">@(_busy ? "Logging in…" : "Log in")</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        if (await Auth.LoginAsync(_email, _password))
+        {
+            AuthState.NotifyChanged();
+            await Migration.MigrateIfNeededAsync();
+            Nav.NavigateTo("/routes");
+        }
+        else
+        {
+            _error = "Invalid email or password.";
+            _busy = false;
+        }
+    }
+}

@@ -253,6 +253,13 @@ html, body {
 .btn.sm { flex: 0 0 auto; padding: 7px 12px; font-size: 12px; }
 .listpanel .row { align-items: center; }
 
+/* ---- auth forms ---- */
+.err { color: #f87171; font-size: 12.5px; margin: 6px 0; }
+.muted { color: var(--card-sub); font-size: 12px; margin-top: 8px; }
+.muted a, .err a { color: var(--accent-strong); }
+.field .muted { margin-top: 4px; }
+.page-body .a1 { font-size: 15px; font-weight: 700; margin-top: 2px; }
+
 /* ===== template chrome kept from scaffold ===== */
 #blazor-error-ui {
     color-scheme: light only; background: lightyellow; bottom: 0; box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);

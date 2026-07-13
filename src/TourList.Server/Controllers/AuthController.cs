@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TourList.Server.Data;
+using TourList.Server.Services.Email;
 using TourList.Shared;
 using TourList.Shared.Auth;
 
@@ -19,6 +20,7 @@ namespace TourList.Server.Controllers;
 public sealed class AuthController(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
+    IEmailDispatcher emailSender,
     ILogger<AuthController> logger) : ControllerBase
 {
     [HttpPost("register")]
@@ -103,10 +105,11 @@ public sealed class AuthController(
         if (user is not null && user.IsActive)
         {
             var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            var resetLink =
+                $"{Request.Scheme}://{Request.Host}/reset-password" +
+                $"?email={Uri.EscapeDataString(user.Email!)}&token={Uri.EscapeDataString(token)}";
 
-            // TODO (M5): deliver the reset link via Azure Communication Services Email.
-            // Until then, surface the token in logs for local testing only.
-            logger.LogInformation("Password reset token generated for {Email}: {Token}", request.Email, token);
+            await emailSender.SendPasswordResetAsync(user.Email!, resetLink);
         }
 
         // Always 200 — never reveal whether the account exists.

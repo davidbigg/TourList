@@ -9,6 +9,7 @@ using TourList.Server;
 using TourList.Server.Data;
 using TourList.Server.Options;
 using TourList.Server.Services;
+using TourList.Server.Services.Email;
 using TourList.Server.Services.Geocoding;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -95,6 +96,13 @@ builder.Services.AddHttpClient<IGeocoder, AzureMapsGeocoder>((sp, client) =>
 }).AddHttpMessageHandler<AzureMapsAuthHandler>();
 
 builder.Services.AddScoped<EntryService>();
+builder.Services.AddScoped<RouteService>();
+builder.Services.AddScoped<RouteMergeService>();
+
+// Azure Communication Services email (password recovery); logs the link when not configured.
+builder.Services.AddOptions<AcsEmailOptions>()
+    .Bind(builder.Configuration.GetSection(AcsEmailOptions.SectionName));
+builder.Services.AddSingleton<IEmailDispatcher, AcsEmailSender>();
 
 // Per-IP rate limiting for the guest-reachable maps token endpoint and the auth endpoints.
 builder.Services.AddRateLimiter(rl =>
