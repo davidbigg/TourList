@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PinList · 5 Hi-fi Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Figtree:wght@400;500;600;700;800&family=Libre+Franklin:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Archivo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#20222a;color:#e8eaf0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+
+  /* ---- shell ---- */
+  .topbar{position:sticky;top:0;z-index:60;background:#181a20;border-bottom:1px solid #2c2f38;padding:16px 24px 0;}
+  .brandrow{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .brand{font-weight:800;font-size:22px;letter-spacing:-.02em;}
+  .brand b{color:#8ab4ff;}
+  .sub{font-size:13px;color:#9aa0ad;}
+  .tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;}
+  .tab{flex:0 0 auto;font-family:inherit;font-size:13px;font-weight:600;color:#9aa0ad;background:transparent;border:none;border-bottom:2px solid transparent;padding:11px 16px 13px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:9px;transition:color .15s;}
+  .tab .sw{width:14px;height:14px;border-radius:4px;border:1px solid rgba(255,255,255,.25);}
+  .tab:hover{color:#e8eaf0;}
+  .tab[aria-selected="true"]{color:#fff;border-bottom-color:#8ab4ff;}
+
+  .stage{max-width:1280px;margin:0 auto;padding:30px 24px 90px;}
+  .frame{display:none;}
+  .frame.active{display:block;}
+  @media (prefers-reduced-motion: no-preference){.frame.active{animation:fade .3s ease both;}}
+  @keyframes fade{from{transform:translateY(8px);}to{transform:none;}}
+  .fhead{display:flex;align-items:flex-end;gap:14px;margin-bottom:5px;flex-wrap:wrap;}
+  .fhead h2{font-size:24px;font-weight:800;margin:0;letter-spacing:-.02em;}
+  .fhead .badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:4px 10px;border-radius:20px;background:#2c2f38;color:#b7bdca;}
+  .fhead .badge.light{background:#3a4256;color:#cdd6ea;}
+  .fhead .badge.dark{background:#12141a;color:#8ab4ff;border:1px solid #2c2f38;}
+  .fdesc{font-size:14px;color:#9aa0ad;max-width:820px;line-height:1.55;margin:2px 0 22px;}
+
+  .layout{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;}
+  .col-desk{flex:1;min-width:440px;}
+  .col-mob{flex:0 0 300px;}
+  .cap{font-size:12px;font-weight:600;color:#9aa0ad;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+  .cap::before{content:"";width:16px;height:1px;background:#4a4f5c;}
+
+  /* window chrome */
+  .win{border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.06);}
+  .winbar{display:flex;align-items:center;gap:7px;padding:9px 13px;background:#2a2d36;}
+  .winbar i{width:11px;height:11px;border-radius:50%;background:#4a4f5c;}
+  .winbar .u{margin-left:10px;font-size:11px;color:#8890a0;font-family:'IBM Plex Mono',monospace;}
+  .screen{position:relative;height:520px;}
+  .screen.mob{height:600px;}
+
+  /* ============ THEMED APP (all vars set per-frame) ============ */
+  .app{position:absolute;inset:0;font-family:var(--font-body);overflow:hidden;}
+
+  /* map */
+  .map{position:absolute;inset:0;background:var(--land2);}
+  .map .grid{position:absolute;inset:-10%;
+    background-image:
+      linear-gradient(0deg, var(--road) 0 3px, transparent 3px),
+      linear-gradient(90deg, var(--road) 0 3px, transparent 3px);
+    background-size:52px 52px;}
+  .map .grid.fine{background-size:26px 26px;opacity:.5;}
+  .rd{position:absolute;background:var(--road-main);border-radius:3px;}
+  .rd.h{height:16px;left:-6%;width:112%;}
+  .rd.v{width:16px;top:-6%;height:112%;}
+  .rd.diag{height:15px;width:70%;transform:rotate(26deg);transform-origin:left center;}
+  .park{position:absolute;background:var(--park);border-radius:44% 56% 60% 40%/55% 45% 55% 45%;}
+  .water{position:absolute;background:var(--water);border-radius:56% 44% 48% 52%/48% 56% 44% 52%;}
+  .blockhi{position:absolute;background:var(--land);border-radius:3px;opacity:.7;}
+
+  .routeline{position:absolute;inset:0;pointer-events:none;}
+  .routeline path{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.9;}
+
+  .pin{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;z-index:3;filter:drop-shadow(0 4px 6px rgba(0,0,0,.28));}
+  .pin .p{width:30px;height:30px;border-radius:50% 50% 50% 3px;transform:rotate(45deg);background:var(--pin);border:2px solid var(--pin-ring,#fff);display:grid;place-items:center;}
+  .pin .p span{transform:rotate(-45deg);color:var(--pin-fg);font-family:var(--font-head);font-weight:700;font-size:13px;}
+  .pin.ghost .p{background:var(--pin-ghost);}
+  .pin.ghost .p span{color:var(--card-sub);}
+  .pin .plabel{margin-top:6px;font-family:var(--font-head);font-size:11px;font-weight:700;background:var(--card);color:var(--card-fg);padding:2px 7px;border-radius:20px;box-shadow:var(--shadow);white-space:nowrap;}
+  /* tag-style pins (bold theme) */
+  .app.tagpin .pin .p{width:28px;height:28px;border-radius:7px;transform:none;}
+  .app.tagpin .pin .p span{transform:none;}
+
+  /* switcher chip */
+  .switcher{position:absolute;top:16px;left:16px;z-index:5;display:flex;align-items:center;gap:9px;background:var(--card);color:var(--card-fg);border:1px solid var(--border);border-radius:var(--pill-radius);padding:9px 13px;box-shadow:var(--shadow);backdrop-filter:var(--blur);font-family:var(--font-head);font-weight:700;font-size:13px;cursor:pointer;}
+  .switcher .ic{width:18px;height:18px;border-radius:5px;background:var(--accent);flex:0 0 auto;}
+  .switcher .cr{color:var(--card-sub);font-size:11px;}
+
+  /* stats overlay */
+  .stats{position:absolute;top:16px;right:16px;z-index:5;display:flex;gap:8px;}
+  .stat{background:var(--card);color:var(--card-fg);border:1px solid var(--border);border-radius:var(--pill-radius);padding:7px 12px;box-shadow:var(--shadow);backdrop-filter:var(--blur);font-size:12px;}
+  .stat b{font-family:var(--font-head);font-weight:800;}
+  .stat span{color:var(--card-sub);font-size:10px;display:block;text-transform:uppercase;letter-spacing:.05em;}
+
+  /* desktop list card */
+  .card{position:absolute;top:64px;right:16px;bottom:16px;width:286px;z-index:4;display:flex;flex-direction:column;
+    background:color-mix(in srgb, var(--card-solid) calc(var(--tw-list-opacity,100) * 1%), transparent);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(calc(var(--tw-list-blur,0) * 1px));overflow:hidden;}
+  .card .ch{padding:15px 16px 13px;border-bottom:1px solid var(--border);}
+  .card .ch .t{font-family:var(--font-head);font-weight:var(--head-weight,800);font-size:16px;color:var(--card-fg);letter-spacing:var(--head-tracking,-.01em);}
+  .card .ch .m{font-size:11.5px;color:var(--card-sub);margin-top:3px;}
+  .rows{overflow:auto;flex:1;}
+  .rows::-webkit-scrollbar{width:0;}
+  .row{display:flex;gap:11px;align-items:flex-start;padding:12px 16px;border-bottom:1px solid var(--border-soft,var(--border));cursor:pointer;transition:background .12s;}
+  .row:hover{background:var(--row-hover);}
+  .row .n{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent-strong,var(--accent));display:grid;place-items:center;font-family:var(--font-head);font-weight:700;font-size:12px;border:1px solid var(--accent-ring,transparent);}
+  .row .rt{flex:1;min-width:0;}
+  .row .a1{font-family:var(--font-head);font-size:13.5px;font-weight:600;color:var(--card-fg);}
+  .row .a2{font-size:11.5px;color:var(--card-sub);margin-top:2px;}
+  .row .dist{font-size:11px;color:var(--card-sub);font-family:var(--font-mono,var(--font-head));white-space:nowrap;padding-top:2px;}
+  .card .cf{padding:11px 14px;border-top:1px solid var(--border);display:flex;gap:8px;}
+  .btn{flex:1;font-family:var(--font-head);font-weight:700;font-size:12.5px;border-radius:var(--btn-radius,10px);padding:9px;border:1px solid var(--border);background:var(--btn-bg,transparent);color:var(--card-fg);cursor:pointer;text-align:center;}
+  .btn.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);}
+
+  /* mobile sheet */
+  .topbarm{position:absolute;top:0;left:0;right:0;z-index:5;padding:14px 14px 0;}
+  .switcher.full{position:static;width:100%;justify-content:center;box-shadow:var(--shadow);}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;height:250px;background:color-mix(in srgb, var(--card-solid) calc(var(--tw-list-opacity,100) * 1%), transparent);border-top:1px solid var(--border);border-radius:22px 22px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(calc(var(--tw-list-blur,0) * 1px));}
+  .sheet .grip{width:40px;height:5px;border-radius:3px;background:var(--card-sub);opacity:.45;margin:9px auto 4px;}
+  .sheet .sh{padding:4px 16px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+  .sheet .sh .t{font-family:var(--font-head);font-weight:800;font-size:15px;color:var(--card-fg);}
+  .sheet .sh .m{font-size:11px;color:var(--card-sub);}
+
+  /* ---- interactive day/night (Watch) ---- */
+  .app.tog{transition:none;--tw-list-opacity:50;}
+  .app.tog .map,.app.tog .rd,.app.tog .park,.app.tog .water,.app.tog .blockhi,
+  .app.tog .card,.app.tog .sheet,.app.tog .switcher,.app.tog .themesel,.app.tog .themeicon,
+  .app.tog .card .ch,.app.tog .row,.app.tog .btn{transition:background-color .4s ease,color .4s ease,border-color .4s ease,box-shadow .4s ease;}
+  .app.tog .routeline path,.app.tog .pin .p{transition:stroke .4s ease,background-color .4s ease,border-color .4s ease;}
+  .app.tog.dark{
+    --font-head:'Space Grotesk',sans-serif;--font-body:'Space Grotesk',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+    --land:#161c24;--land2:#11161d;--road:#1c232d;--road-main:#2b3541;--park:#16271e;--water:#122430;
+    --card:rgba(20,26,34,.80);--card-solid:#161c24;--card-fg:#e9eef4;--card-sub:#8794a4;
+    --border:rgba(255,255,255,.09);--border-soft:rgba(255,255,255,.05);--row-hover:rgba(94,234,212,.08);
+    --accent:#5eead4;--accent-fg:#04120e;--accent-soft:rgba(94,234,212,.14);--accent-strong:#5eead4;
+    --pin:#5eead4;--pin-fg:#04120e;--pin-ring:#0c1219;--pin-ghost:#2a333f;
+    --shadow:0 12px 40px rgba(0,0,0,.55);--radius:14px;--pill-radius:11px;--btn-radius:9px;--head-weight:700;
+  }
+  .app.tog.light{
+    --font-head:'Space Grotesk',sans-serif;--font-body:'Space Grotesk',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+    --land:#eef2f1;--land2:#e3e9e7;--road:#f4f8f6;--road-main:#ffffff;--park:#d3e6d6;--water:#c6dce2;
+    --card:rgba(255,255,255,.86);--card-solid:#ffffff;--card-fg:#132320;--card-sub:#6d8079;
+    --border:rgba(20,60,55,.12);--border-soft:rgba(20,60,55,.07);--row-hover:rgba(13,148,136,.08);
+    --accent:#0d9488;--accent-fg:#ffffff;--accent-soft:rgba(13,148,136,.14);--accent-strong:#0b7267;
+    --pin:#0d9488;--pin-fg:#ffffff;--pin-ring:#ffffff;--pin-ghost:#c9d6d2;
+    --shadow:0 10px 30px rgba(15,60,55,.14);--radius:14px;--pill-radius:11px;--btn-radius:9px;--head-weight:700;
+  }
+  .themesel{position:absolute;top:16px;right:16px;z-index:6;display:flex;gap:3px;padding:3px;
+    background:color-mix(in srgb, var(--card-solid) calc(var(--tw-list-opacity,100) * 1%), transparent);
+    border:1px solid var(--border);border-radius:var(--pill-radius);box-shadow:var(--shadow);backdrop-filter:blur(calc(var(--tw-list-blur,0) * 1px));}
+  .themesel button{border:none;background:transparent;color:var(--card-sub);width:34px;height:28px;border-radius:calc(var(--pill-radius) - 3px);cursor:pointer;font-size:14px;display:grid;place-items:center;transition:background-color .2s,color .2s;font-family:var(--font-head);}
+  .themesel button:hover{color:var(--card-fg);}
+  .themesel button.active{background:var(--accent);color:var(--accent-fg);}
+  .themeicon{width:42px;height:42px;flex:0 0 auto;border-radius:12px;cursor:pointer;font-size:16px;display:grid;place-items:center;color:var(--card-fg);
+    background:color-mix(in srgb, var(--card-solid) calc(var(--tw-list-opacity,100) * 1%), transparent);
+    border:1px solid var(--border);box-shadow:var(--shadow);backdrop-filter:blur(calc(var(--tw-list-blur,0) * 1px));}
+
+  .footnote{margin-top:18px;display:flex;gap:16px;flex-wrap:wrap;}
+  .fn{font-size:12.5px;color:#9aa0ad;flex:1;min-width:200px;line-height:1.5;}
+  .fn b{color:#cdd3df;}
+  .hint{text-align:center;font-size:13px;color:#6b7280;margin:30px auto 0;}
+
+  /* ---- tweaks panel ---- */
+  #tweaks{position:fixed;top:16px;right:16px;z-index:200;width:270px;background:#1c1f27;border:1px solid #33384420;border:1px solid #333844;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.5);padding:16px;display:none;font-family:'Plus Jakarta Sans',sans-serif;}
+  #tweaks.on{display:block;}
+  #tweaks .th{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  #tweaks .th h3{margin:0;font-size:14px;font-weight:800;letter-spacing:-.01em;}
+  #tweaks .x{background:none;border:none;color:#9aa0ad;font-size:18px;cursor:pointer;line-height:1;padding:0 2px;}
+  #tweaks .x:hover{color:#fff;}
+  #tweaks .tk{margin-bottom:16px;}
+  #tweaks .tk label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:#c3c9d5;margin-bottom:7px;}
+  #tweaks .tk label span{color:#8ab4ff;font-family:'IBM Plex Mono',monospace;font-weight:500;}
+  #tweaks input[type=range]{width:100%;accent-color:#8ab4ff;height:4px;}
+  #tweaks .note{font-size:11px;color:#7b8494;line-height:1.5;margin-top:4px;}
+  .hint kbd{background:#2a2d36;border:1px solid #3a3f4a;border-radius:5px;padding:1px 7px;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brandrow">
+      <div class="brand">Pin<b>List</b></div>
+      <div class="sub">5 hi-fi directions · direction 11 layout (floating card ⇄ bottom sheet)</div>
+    </div>
+    <div class="tabs" id="tabs" role="tablist"></div>
+  </div>
+  <div class="stage" id="stage"></div>
+  <p class="hint">Same layout, five looks · <kbd>←</kbd> <kbd>→</kbd> to switch</p>
+
+  <div id="tweaks">
+    <div class="th"><h3>Tweaks</h3><button class="x" id="twClose" title="close">✕</button></div>
+    <div class="tk">
+      <label>List translucency <span id="opVal">85%</span></label>
+      <input type="range" id="opRange" min="40" max="100" step="1">
+      <div class="note">How much the floating list / bottom sheet lets the map show through.</div>
+    </div>
+    <div class="tk">
+      <label>Backdrop blur <span id="blVal">12px</span></label>
+      <input type="range" id="blRange" min="0" max="24" step="1">
+      <div class="note">Frosts the map behind the panel. Pairs well with lower opacity.</div>
+    </div>
+  </div>
+
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "listOpacity": 85,
+  "blur": 12
+}/*EDITMODE-END*/;
+/* ---------- shared map + list ---------- */
+function mapDecor(){
+  return `
+    <div class="grid"></div>
+    <div class="park" style="width:180px;height:150px;top:-24px;left:12%;"></div>
+    <div class="park" style="width:120px;height:100px;top:44%;left:2%;"></div>
+    <div class="water" style="width:300px;height:180px;bottom:-46px;right:-40px;"></div>
+    <div class="blockhi" style="width:120px;height:80px;top:20%;left:48%;"></div>
+    <div class="blockhi" style="width:90px;height:110px;top:52%;left:60%;"></div>
+    <div class="rd h" style="top:33%;"></div>
+    <div class="rd h" style="top:67%;"></div>
+    <div class="rd v" style="left:43%;"></div>
+    <div class="rd v" style="left:74%;"></div>
+    <div class="rd diag" style="top:8%;left:2%;"></div>`;
+}
+const PINS=[[22,70],[38,54],[55,62],[68,40],[82,50],[60,26]];
+function pins(labels){
+  return PINS.map((p,i)=>`<div class="pin" style="left:${p[0]}%;top:${p[1]}%;"><div class="p"><span>${i+1}</span></div>${labels&&labels[i]?`<div class="plabel">${labels[i]}</div>`:""}</div>`).join("")
+    + `<div class="pin ghost" style="left:30%;top:38%;"><div class="p"><span>·</span></div></div>`
+    + `<div class="pin ghost" style="left:88%;top:30%;"><div class="p"><span>·</span></div></div>`;
+}
+function route(){ return `<svg class="routeline" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M22,70 L38,54 L55,62 L68,40 L82,50 L60,26"/></svg>`; }
+
+const GENERIC=[["Kettle Creek Rd","North quarter"],["Highland Pass","Sector 2"],["Maple & 7th Ave","Midtown"],["Riverside Depot","Dock 4"],["Elmwood Ln","West block"],["Sunset Yard","Terminal"]];
+const ESTATE=[["124 Maple Ave","3 bd · 2 ba","$455k"],["8 Oak Ridge Dr","4 bd · 3 ba","$612k"],["57 Pine Street","2 bd · 2 ba","$389k"],["230 Harbor Way","3 bd · 2 ba","$540k"],["19 Elm Court","5 bd · 4 ba","$720k"],["61 Cedar Lane","3 bd · 1 ba","$410k"]];
+
+function rowset(n,type){
+  let out="";
+  for(let i=0;i<n;i++){
+    if(type==='estate'){
+      const r=ESTATE[i];
+      out+=`<div class="row"><div class="n">${i+1}</div><div class="rt"><div class="a1">${r[0]}</div><div class="a2">${r[1]}</div></div><div class="dist">${r[2]}</div></div>`;
+    }else{
+      const r=GENERIC[i];
+      out+=`<div class="row"><div class="n">${i+1}</div><div class="rt"><div class="a1">${r[0]}</div><div class="a2">${r[1]}</div></div><div class="dist">${(2.1+i*1.4).toFixed(1)} mi</div></div>`;
+    }
+  }
+  return out;
+}
+
+function desktop(t){
+  if(t.toggle) return `<div class="app tog dark" data-app>
+    <div class="map">${mapDecor()}</div>
+    ${route()}
+    ${pins(t.pinLabels)}
+    <div class="switcher"><span class="ic"></span>${t.list} <span class="cr">▾</span></div>
+    <div class="themesel" data-sel>
+      <button data-mode="light" title="Day">☀</button>
+      <button data-mode="dark" class="active" title="Night">☾</button>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="t">${t.list}</div><div class="m">${t.sub}</div></div>
+      <div class="rows">${rowset(6,t.type)}</div>
+      <div class="cf"><button class="btn pri">Open in Maps</button><button class="btn">Share</button></div>
+    </div>
+  </div>`;
+  return `<div class="app ${t.appClass||''}" style="${t.vars}">
+    <div class="map">${mapDecor()}</div>
+    ${route()}
+    ${pins(t.pinLabels)}
+    <div class="switcher"><span class="ic"></span>${t.list} <span class="cr">▾</span></div>
+    <div class="stats">
+      <div class="stat"><b>${t.stops}</b><span>stops</span></div>
+      <div class="stat"><b>${t.miles}</b><span>${t.milesUnit||'miles'}</span></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="t">${t.list}</div><div class="m">${t.sub}</div></div>
+      <div class="rows">${rowset(6,t.type)}</div>
+      <div class="cf"><button class="btn pri">Open in Maps</button><button class="btn">Share</button></div>
+    </div>
+  </div>`;
+}
+function mobile(t){
+  if(t.toggle) return `<div class="app tog dark" data-app>
+    <div class="map">${mapDecor()}</div>
+    ${route()}
+    ${pins(t.pinLabels)}
+    <div class="topbarm" style="display:flex;gap:8px;align-items:stretch;">
+      <div class="switcher full" style="flex:1;"><span class="ic"></span>${t.list} <span class="cr">▾</span></div>
+      <button class="themeicon" data-modetoggle title="Day / night">☾</button>
+    </div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="sh"><div class="t">${t.list}</div><div class="m">${t.stops} · ${t.miles} ${t.milesUnit||'mi'}</div></div>
+      <div class="rows">${rowset(4,t.type)}</div>
+    </div>
+  </div>`;
+  return `<div class="app ${t.appClass||''}" style="${t.vars}">
+    <div class="map">${mapDecor()}</div>
+    ${route()}
+    ${pins(t.pinLabels)}
+    <div class="topbarm"><div class="switcher full"><span class="ic"></span>${t.list} <span class="cr">▾</span></div></div>
+    <div class="sheet">
+      <div class="grip"></div>
+      <div class="sh"><div class="t">${t.list}</div><div class="m">${t.stops} · ${t.miles} ${t.milesUnit||'mi'}</div></div>
+      <div class="rows">${rowset(4,t.type)}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- 5 themes ---------- */
+const V=(o)=>Object.entries(o).map(([k,v])=>`${k}:${v}`).join(';');
+
+const THEMES=[
+  {
+    key:"Daybreak", kind:"light", swatch:"#3b6ef5",
+    desc:"Clean SaaS. Soft off-white map, frosted-glass list card, one confident indigo accent. Plus Jakarta Sans throughout, generous radii and airy shadows — the safe, modern default.",
+    list:"Delivery Route · Midtown", sub:"6 stops · optimized ✓ · 3.2 mi to first", stops:"6", miles:"11.4", type:"generic",
+    vars:V({
+      '--font-head':"'Plus Jakarta Sans',sans-serif",'--font-body':"'Plus Jakarta Sans',sans-serif",
+      '--land':"#eef2f7",'--land2':"#e4e9f0",'--road':"#f5f8fc",'--road-main':"#ffffff",
+      '--park':"#d6e8d4",'--water':"#c6dcef",
+      '--card':"rgba(255,255,255,.82)",'--card-solid':"#ffffff",'--card-fg':"#1c2430",'--card-sub':"#71809a",
+      '--border':"rgba(30,50,90,.10)",'--border-soft':"rgba(30,50,90,.07)",'--row-hover':"rgba(59,110,245,.06)",
+      '--accent':"#3b6ef5",'--accent-fg':"#ffffff",'--accent-soft':"rgba(59,110,245,.12)",'--accent-strong':"#2a54c7",
+      '--pin':"#3b6ef5",'--pin-fg':"#ffffff",'--pin-ring':"#ffffff",'--pin-ghost':"#c8d2e4",
+      '--shadow':"0 10px 30px rgba(20,35,70,.14)",'--blur':"blur(14px)",
+      '--radius':"18px",'--pill-radius':"14px",'--btn-radius':"11px",
+    })
+  },
+  {
+    key:"Watch", kind:"light + dark", swatch:"#5eead4", toggle:true,
+    desc:"Nightwatch and Daywatch, merged into one console with a live theme selector — a day / night segmented control top-right on desktop, and a single icon top-right on mobile. The Space Grotesk + teal identity holds across both modes; only the surface flips, with a smooth cross-fade.",
+    list:"Dispatch · Zone 4", sub:"6 active · 2 unassigned · live", stops:"6", miles:"11.4", type:"generic",
+    vars:""
+  },
+  {
+    key:"Homestead", kind:"light", swatch:"#c56b3f",
+    desc:"Field & ag. Warm cream paper, olive parkland, a solid terracotta accent — friendly and legible in sunlight. Figtree gives rounded, approachable type for growers working off a truck.",
+    list:"Farm Route · North", sub:"6 fields · 214 acres · fenced order", stops:"6", miles:"18.7", type:"generic",
+    vars:V({
+      '--font-head':"'Figtree',sans-serif",'--font-body':"'Figtree',sans-serif",
+      '--land':"#f1eadd",'--land2':"#ece2cf",'--road':"#f6efe1",'--road-main':"#fdf9f0",
+      '--park':"#d7dfb8",'--water':"#cadfd8",
+      '--card':"#fffdf7",'--card-solid':"#fffdf7",'--card-fg':"#39321f",'--card-sub':"#8a7d63",
+      '--border':"rgba(120,95,50,.16)",'--border-soft':"rgba(120,95,50,.10)",'--row-hover':"rgba(197,107,63,.08)",
+      '--accent':"#c56b3f",'--accent-fg':"#ffffff",'--accent-soft':"rgba(197,107,63,.14)",'--accent-strong':"#a8552d",
+      '--pin':"#c56b3f",'--pin-fg':"#ffffff",'--pin-ring':"#fffdf7",'--pin-ghost':"#ddd1bb",
+      '--shadow':"0 10px 26px rgba(90,65,30,.16)",'--blur':"none",
+      '--radius':"20px",'--pill-radius':"16px",'--btn-radius':"13px",
+    })
+  },
+  {
+    key:"Estate", kind:"premium", swatch:"#2f5d43",
+    desc:"Real-estate premium. Restrained sage-and-ivory map, gold price pins, deep-green actions. Playfair Display headings over Libre Franklin body — the elevated, catalog-quality treatment for showings.",
+    list:"Showings · Saturday", sub:"6 homes · avg $521k · touring order", stops:"6", miles:"$521k", milesUnit:"avg price", type:"estate",
+    pinLabels:["$455k","$612k","$389k","$540k","$720k","$410k"],
+    vars:V({
+      '--font-head':"'Playfair Display',serif",'--font-body':"'Libre Franklin',sans-serif",
+      '--land':"#eeece5",'--land2':"#e5e2d8",'--road':"#f3f1ea",'--road-main':"#fbfaf6",
+      '--park':"#d4ddc5",'--water':"#ccd8d4",
+      '--card':"#ffffff",'--card-solid':"#ffffff",'--card-fg':"#25302a",'--card-sub':"#7c857f",
+      '--border':"rgba(40,55,45,.14)",'--border-soft':"rgba(40,55,45,.08)",'--row-hover':"rgba(47,93,67,.06)",
+      '--accent':"#2f5d43",'--accent-fg':"#ffffff",'--accent-soft':"rgba(201,163,78,.20)",'--accent-strong':"#2f5d43",'--accent-ring':"rgba(201,163,78,.5)",
+      '--pin':"#c9a34e",'--pin-fg':"#3a2f12",'--pin-ring':"#ffffff",'--pin-ghost':"#d8d5cb",
+      '--shadow':"0 14px 36px rgba(30,45,35,.16)",'--blur':"none",
+      '--radius':"8px",'--pill-radius':"7px",'--btn-radius':"6px",'--head-weight':"600",'--head-tracking':"0",
+    })
+  },
+  {
+    key:"Boldline", kind:"light", swatch:"#ff5a1f",
+    desc:"Bold & high-contrast. Hard black outlines, offset drop-shadows, electric-orange accent, square tag-pins. Heavy Archivo with uppercase labels — a confident, brand-forward look that pops.",
+    list:"Sales Loop · West", sub:"6 stops · 2H 10M · locked order", stops:"6", miles:"32", type:"generic",
+    appClass:"tagpin",
+    vars:V({
+      '--font-head':"'Archivo',sans-serif",'--font-body':"'Archivo',sans-serif",
+      '--land':"#efece3",'--land2':"#e6e2d6",'--road':"#f3f0e8",'--road-main':"#ffffff",
+      '--park':"#d8e6cc",'--water':"#c7dbee",
+      '--card':"#ffffff",'--card-solid':"#ffffff",'--card-fg':"#111111",'--card-sub':"#5a5a52",
+      '--border':"#141414",'--border-soft':"rgba(20,20,20,.14)",'--row-hover':"rgba(255,90,31,.10)",
+      '--accent':"#ff5a1f",'--accent-fg':"#ffffff",'--accent-soft':"rgba(255,90,31,.16)",'--accent-strong':"#e0430c",'--accent-ring':"#141414",
+      '--pin':"#ff5a1f",'--pin-fg':"#ffffff",'--pin-ring':"#141414",'--pin-ghost':"#ffffff",
+      '--shadow':"5px 5px 0 #141414",'--blur':"none",
+      '--radius':"6px",'--pill-radius':"6px",'--btn-radius':"6px",'--head-weight':"800",
+    })
+  },
+];
+
+const footnotes={
+  Daybreak:[["Glass card","<b>82% white + 14px blur</b> keeps the map legible underneath."],["Accent","one indigo for route, pins, and primary action — nothing competes."],["Feel","calm, trustworthy, works for any B2B audience."]],
+  Watch:[["One console, two modes","the same dispatch UI flips between day and night from a single selector."],["Where","segmented control top-right on desktop; a compact ☀/☾ icon top-right on mobile."],["Continuity","Space Grotesk + teal accent stay put — only surfaces cross-fade."]],
+  Homestead:[["Sunlight","warm, high-lightness palette stays readable outdoors."],["Solid card","no blur — <b>opaque cream</b> panel, crisp on cheap screens."],["Tone","friendly and grounded for field / ag crews."]],
+  Estate:[["Price pins","gold pins carry <b>the number that matters</b> right on the map."],["Type","serif headings signal a premium, catalog-grade product."],["Restraint","muted sage map lets listings be the color."]],
+  Boldline:[["Presence","hard <b>5px offset shadow</b> + black outlines = strong brand feel."],["Tag pins","squared pins read as labels, not just dots."],["Punch","electric orange for a memorable, opinionated look."]],
+};
+
+/* ---------- render ---------- */
+const tabs=document.getElementById('tabs'),stage=document.getElementById('stage');
+THEMES.forEach((t,i)=>{
+  const tab=document.createElement('button');
+  tab.className='tab';tab.setAttribute('role','tab');tab.setAttribute('aria-selected',i===0?'true':'false');
+  tab.innerHTML=`<span class="sw" style="background:${t.swatch}"></span>${t.key}`;
+  tab.addEventListener('click',()=>select(i));
+  tabs.appendChild(tab);
+
+  const f=document.createElement('section');
+  f.className='frame'+(i===0?' active':'');
+  f.setAttribute('data-screen-label',t.key);
+  const badgeCls=t.kind==='dark'?'dark':(t.kind==='premium'?'':'light');
+  f.innerHTML=`
+    <div class="fhead"><h2>${i+1}. ${t.key}</h2><span class="badge ${badgeCls}">${t.kind}</span></div>
+    <div class="fdesc">${t.desc}</div>
+    <div class="layout">
+      <div class="col-desk">
+        <div class="cap">Desktop · floating card</div>
+        <div class="win"><div class="winbar"><i></i><i></i><i></i><span class="u">pinlist.app/lists/${t.key.toLowerCase()}</span></div><div class="screen">${desktop(t)}</div></div>
+      </div>
+      <div class="col-mob">
+        <div class="cap">Mobile · bottom sheet</div>
+        <div class="win"><div class="winbar"><i></i><i></i><i></i></div><div class="screen mob">${mobile(t)}</div></div>
+      </div>
+    </div>
+    <div class="footnote">${footnotes[t.key].map(x=>`<div class="fn"><b>${x[0]}</b> — ${x[1]}</div>`).join("")}</div>`;
+  stage.appendChild(f);
+
+  if(t.toggle){
+    let mode='dark';
+    const apply=m=>{
+      mode=m;
+      f.querySelectorAll('.app.tog').forEach(a=>{a.classList.toggle('dark',m==='dark');a.classList.toggle('light',m==='light');});
+      f.querySelectorAll('[data-sel] button').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+      const ic=f.querySelector('[data-modetoggle]'); if(ic) ic.textContent = m==='dark'?'☾':'☀';
+    };
+    f.querySelectorAll('[data-sel] button').forEach(b=>b.addEventListener('click',()=>apply(b.dataset.mode)));
+    const ic=f.querySelector('[data-modetoggle]'); if(ic) ic.addEventListener('click',()=>apply(mode==='dark'?'light':'dark'));
+  }
+});
+
+let cur=0;
+function select(i){
+  cur=(i+THEMES.length)%THEMES.length;
+  [...tabs.children].forEach((t,k)=>t.setAttribute('aria-selected',k===cur?'true':'false'));
+  [...stage.children].forEach((f,k)=>f.classList.toggle('active',k===cur));
+  tabs.children[cur].scrollIntoView({block:'nearest',inline:'center'});
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')select(cur+1);if(e.key==='ArrowLeft')select(cur-1);});
+
+/* ---------- tweaks ---------- */
+const tw={...TWEAK_DEFAULTS};
+const root=document.documentElement;
+const opRange=document.getElementById('opRange'),blRange=document.getElementById('blRange');
+const opVal=document.getElementById('opVal'),blVal=document.getElementById('blVal');
+function applyTweaks(){
+  root.style.setProperty('--tw-list-opacity',tw.listOpacity);
+  root.style.setProperty('--tw-list-blur',tw.blur);
+  opRange.value=tw.listOpacity;blRange.value=tw.blur;
+  opVal.textContent=tw.listOpacity+'%';blVal.textContent=tw.blur+'px';
+}
+applyTweaks();
+function setTweak(k,v){tw[k]=v;applyTweaks();window.parent.postMessage({type:'__edit_mode_set_keys',edits:{[k]:v}},'*');}
+opRange.addEventListener('input',e=>setTweak('listOpacity',+e.target.value));
+blRange.addEventListener('input',e=>setTweak('blur',+e.target.value));
+
+const panel=document.getElementById('tweaks');
+window.addEventListener('message',e=>{
+  const t=e.data&&e.data.type;
+  if(t==='__activate_edit_mode')panel.classList.add('on');
+  if(t==='__deactivate_edit_mode')panel.classList.remove('on');
+});
+document.getElementById('twClose').addEventListener('click',()=>{
+  panel.classList.remove('on');
+  window.parent.postMessage({type:'__edit_mode_dismissed'},'*');
+});
+window.parent.postMessage({type:'__edit_mode_available'},'*');
+</script>
+
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#3b6ef5"/>
+    <rect x="30" y="28" width="40" height="44" rx="8" fill="#ffffff"/>
+    <circle cx="50" cy="44" r="7" fill="#3b6ef5"/>
+    <path d="M50 58 L43 44 A7 7 0 0 1 57 44 Z" fill="#3b6ef5"/>
+  </svg>
+</template>
+</body>
+</html>
