@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TourList.AppHost/TourList.AppHost.csproj" />
+    <Project Path="src/TourList.Client/TourList.Client.csproj" />
+    <Project Path="src/TourList.Server/TourList.Server.csproj" />
+    <Project Path="src/TourList.ServiceDefaults/TourList.ServiceDefaults.csproj" />
+    <Project Path="src/TourList.Shared/TourList.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TourList.Server.Tests/TourList.Server.Tests.csproj" />
+    <Project Path="tests/TourList.Shared.Tests/TourList.Shared.Tests.csproj" />
+  </Folder>
+</Solution>
