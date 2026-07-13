@@ -4,7 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- Fingerprinting disabled: this WASM app is hosted by the Server via UseStaticFiles, which
+         cannot resolve fingerprinted app-JS at runtime. Cache-busting is handled by the PWA
+         service worker (service-worker-assets.js integrity hashes). -->
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
 

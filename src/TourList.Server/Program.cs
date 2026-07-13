@@ -1,9 +1,11 @@
+using System.Threading.RateLimiting;
 using Azure.Core;
 using Azure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using TourList.Server;
 using TourList.Server.Data;
 using TourList.Server.Options;
 using TourList.Server.Services;
@@ -94,6 +96,22 @@ builder.Services.AddHttpClient<IGeocoder, AzureMapsGeocoder>((sp, client) =>
 
 builder.Services.AddScoped<EntryService>();
 
+// Per-IP rate limiting for the guest-reachable maps token endpoint and the auth endpoints.
+builder.Services.AddRateLimiter(rl =>
+{
+    rl.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    rl.AddPolicy(RateLimitPolicies.MapsToken, http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
+
+    rl.AddPolicy(RateLimitPolicies.Auth, http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
+});
+
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
@@ -116,6 +134,8 @@ app.UseHttpsRedirection();
 // Serve the Blazor WASM client from this same origin (no CORS for app↔API).
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

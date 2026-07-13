@@ -1,0 +1,209 @@
+@page "/"
+@implements IDisposable
+@inject CatalogApi Catalog
+@inject ThemeService Theme
+
+<PageTitle>TourList</PageTitle>
+
+<div class="browse">
+    <Map PointsJson="@PointsJson" Theme="@Theme.CssClass" />
+
+    <div class="switcher surface">
+        <span class="ic"></span>
+        <span class="label">TourList · @_visible.Count/@_lists.Count lists</span>
+    </div>
+
+    <div class="search surface">
+        <span>🔍</span>
+        <input placeholder="Search address, notes, or list…" value="@_searchBox" @oninput="OnSearchInput" />
+    </div>
+
+    <ThemeControl />
+
+    <div class="legend surface">
+        <div class="lh">Lists</div>
+        <div class="ll">
+            @if (_loading)
+            {
+                <div class="empty">Loading…</div>
+            }
+            else if (_lists.Count == 0)
+            {
+                <div class="empty">No lists yet.</div>
+            }
+            else
+            {
+                @foreach (var list in _lists)
+                {
+                    <div class="li @(_visible.Contains(list.Id) ? null : "off")" @onclick="() => ToggleList(list.Id)">
+                        <span class="sw" style="background:@ColorFor(list.Id)"></span>
+                        <span class="nm">@list.Name</span>
+                        <span class="ct">@list.EntryCount</span>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <aside class="listpanel surface">
+        <div class="grip"></div>
+        <div class="ph">
+            <div class="t">Entries</div>
+            <div class="m">@_view.Count shown · @_view.Count(e => e.GeocodeStatus == GeocodeStatus.Located) located</div>
+        </div>
+        <div class="rows">
+            @if (_view.Count == 0)
+            {
+                <div class="empty">@(_loading ? "Loading…" : "No matching entries.")</div>
+            }
+            else
+            {
+                @for (var i = 0; i < _view.Count; i++)
+                {
+                    var entry = _view[i];
+                    var index = i + 1;
+                    <div class="row @(_selected?.Id == entry.Id ? "selected" : null)" @onclick="() => _selected = entry">
+                        <div class="n @(entry.GeocodeStatus == GeocodeStatus.Unlocatable ? "flag" : null)" style="@BadgeStyle(entry)">@index</div>
+                        <div class="rt">
+                            <div class="a1">@DisplayAddress(entry)</div>
+                            <div class="a2">@ListNameFor(entry.ListId)@(string.IsNullOrWhiteSpace(entry.Notes) ? null : $" · {entry.Notes}")</div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </aside>
+
+    @if (_selected is not null)
+    {
+        <div class="details surface">
+            <div class="dh">
+                <div class="t">Entry</div>
+                <button class="x" @onclick="() => _selected = null">✕</button>
+            </div>
+            <div class="db">
+                <div class="lbl">Address</div>
+                <div>@_selected.RawAddress</div>
+                @if (!string.IsNullOrWhiteSpace(_selected.FormattedAddress))
+                {
+                    <div class="lbl">Resolved</div>
+                    <div>@_selected.FormattedAddress</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_selected.Notes))
+                {
+                    <div class="lbl">Notes</div>
+                    <div>@_selected.Notes</div>
+                }
+                <div class="lbl">List</div>
+                <div>@ListNameFor(_selected.ListId)</div>
+                <div class="lbl">Status</div>
+                <div><span class="badge @StatusClass(_selected.GeocodeStatus)">@_selected.GeocodeStatus</span></div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ListDto> _lists = [];
+    private readonly Dictionary<Guid, List<EntryDto>> _entriesByList = [];
+    private readonly Dictionary<Guid, string> _colorByList = [];
+    private readonly HashSet<Guid> _visible = [];
+    private List<EntryDto> _view = [];
+    private string _search = "";
+    private string _searchBox = "";
+    private EntryDto? _selected;
+    private bool _loading = true;
+    private CancellationTokenSource? _debounceCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _lists = (await Catalog.GetListsAsync()).ToList();
+        for (var i = 0; i < _lists.Count; i++)
+        {
+            var list = _lists[i];
+            _colorByList[list.Id] = ColorPalette.ColorForList(i);
+            _visible.Add(list.Id);
+            _entriesByList[list.Id] = (await Catalog.GetEntriesAsync(list.Id)).ToList();
+        }
+
+        _loading = false;
+        Recompute();
+    }
+
+    private void ToggleList(Guid id)
+    {
+        if (!_visible.Remove(id))
+        {
+            _visible.Add(id);
+        }
+        Recompute();
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchBox = e.Value?.ToString() ?? "";
+        _debounceCts?.Cancel();
+        var cts = _debounceCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(250, cts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        _search = _searchBox.Trim();
+        Recompute();
+        StateHasChanged();
+    }
+
+    private void Recompute()
+    {
+        IEnumerable<EntryDto> query = _visible.SelectMany(id => _entriesByList.GetValueOrDefault(id) ?? []);
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            query = query.Where(e =>
+                e.RawAddress.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || (e.FormattedAddress?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (e.Notes?.Contains(_search, StringComparison.OrdinalIgnoreCase) ?? false)
+                || ListNameFor(e.ListId).Contains(_search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        _view = query.ToList();
+    }
+
+    private string PointsJson => System.Text.Json.JsonSerializer.Serialize(
+        _view
+            .Where(e => e.Latitude is not null && e.Longitude is not null)
+            .Select(e => new
+            {
+                id = e.Id,
+                listId = e.ListId,
+                lat = e.Latitude,
+                lng = e.Longitude,
+                color = ColorFor(e.ListId),
+                title = DisplayAddress(e),
+                subtitle = ListNameFor(e.ListId),
+            }));
+
+    private string ColorFor(Guid listId) => _colorByList.GetValueOrDefault(listId, "#5eead4");
+
+    private string ListNameFor(Guid listId) => _lists.FirstOrDefault(l => l.Id == listId)?.Name ?? "";
+
+    private string DisplayAddress(EntryDto e) =>
+        string.IsNullOrWhiteSpace(e.FormattedAddress) ? e.RawAddress : e.FormattedAddress!;
+
+    private string? BadgeStyle(EntryDto e) =>
+        e.GeocodeStatus == GeocodeStatus.Unlocatable ? null : $"background:{ColorFor(e.ListId)}22;color:{ColorFor(e.ListId)};";
+
+    private static string StatusClass(GeocodeStatus status) => status switch
+    {
+        GeocodeStatus.Located => "located",
+        GeocodeStatus.Unlocatable => "unlocatable",
+        _ => "pending",
+    };
+
+    public void Dispose() => _debounceCts?.Cancel();
+}

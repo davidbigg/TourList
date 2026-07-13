@@ -1,0 +1,63 @@
+@inject MapInterop MapJs
+@implements IAsyncDisposable
+
+<div class="map @(_live ? null : "placeholder")" id="tourmap">
+    @if (!_live && _initialized)
+    {
+        <div class="grid"></div>
+        <div class="park" style="width:180px;height:150px;top:-24px;left:12%;"></div>
+        <div class="park" style="width:120px;height:100px;top:44%;left:2%;"></div>
+        <div class="water" style="width:300px;height:180px;bottom:-46px;right:-40px;"></div>
+        <div class="rd h" style="top:33%;"></div>
+        <div class="rd h" style="top:67%;"></div>
+        <div class="rd v" style="left:43%;"></div>
+        <div class="rd v" style="left:74%;"></div>
+        <div class="map-badge surface">Map preview — Azure Maps not configured</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string PointsJson { get; set; } = "[]";
+    [Parameter] public string Theme { get; set; } = "dark";
+
+    private bool _live;
+    private bool _initialized;
+    private string _lastPoints = "";
+    private string _lastTheme = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _live = await MapJs.InitAsync("tourmap", Theme);
+            _initialized = true;
+            _lastTheme = Theme;
+            if (_live)
+            {
+                _lastPoints = PointsJson;
+                await MapJs.SetPointsAsync(PointsJson);
+            }
+            StateHasChanged();
+            return;
+        }
+
+        if (!_live)
+        {
+            return;
+        }
+
+        if (Theme != _lastTheme)
+        {
+            _lastTheme = Theme;
+            await MapJs.SetThemeAsync(Theme);
+        }
+
+        if (PointsJson != _lastPoints)
+        {
+            _lastPoints = PointsJson;
+            await MapJs.SetPointsAsync(PointsJson);
+        }
+    }
+
+    public async ValueTask DisposeAsync() => await MapJs.DisposeAsync();
+}

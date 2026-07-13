@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TourList.Server.Data;
 using TourList.Shared;
 using TourList.Shared.Auth;
@@ -14,6 +15,7 @@ namespace TourList.Server.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/auth")]
+[EnableRateLimiting(RateLimitPolicies.Auth)]
 public sealed class AuthController(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,

@@ -1,0 +1,14 @@
+@inject ThemeService Theme
+
+@* Desktop: segmented control. Mobile: single icon button (CSS swaps them at 760px). *@
+<div class="themesel surface" role="group" aria-label="Day or night theme">
+    <button class="@(Theme.Mode == ThemeService.Light ? "active" : null)" title="Day" @onclick="() => Set(ThemeService.Light)">☀</button>
+    <button class="@(Theme.Mode == ThemeService.Dark ? "active" : null)" title="Night" @onclick="() => Set(ThemeService.Dark)">☾</button>
+</div>
+<button class="themeicon surface" title="Toggle day / night" @onclick="Toggle">@(Theme.Mode == ThemeService.Dark ? "☾" : "☀")</button>
+
+@code {
+    private Task Set(string mode) => Theme.SetAsync(mode);
+
+    private Task Toggle() => Theme.ToggleAsync();
+}
