@@ -20,10 +20,19 @@
     [Parameter] public string PointsJson { get; set; } = "[]";
     [Parameter] public string Theme { get; set; } = "dark";
 
+    /// <summary>Optional GeoJSON LineString for the driving route line.</summary>
+    [Parameter] public string? RouteJson { get; set; }
+
+    /// <summary>Optional live user position (Driving View). Null hides the marker.</summary>
+    [Parameter] public double? UserLat { get; set; }
+    [Parameter] public double? UserLng { get; set; }
+
     private bool _live;
     private bool _initialized;
     private string _lastPoints = "";
     private string _lastTheme = "";
+    private string? _lastRoute;
+    private (double Lat, double Lng)? _lastUser;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -34,8 +43,7 @@
             _lastTheme = Theme;
             if (_live)
             {
-                _lastPoints = PointsJson;
-                await MapJs.SetPointsAsync(PointsJson);
+                await PushAllAsync();
             }
             StateHasChanged();
             return;
@@ -52,10 +60,27 @@
             await MapJs.SetThemeAsync(Theme);
         }
 
+        await PushAllAsync();
+    }
+
+    private async Task PushAllAsync()
+    {
+        if (RouteJson != _lastRoute)
+        {
+            _lastRoute = RouteJson;
+            await MapJs.SetRouteAsync(RouteJson);
+        }
+
         if (PointsJson != _lastPoints)
         {
             _lastPoints = PointsJson;
             await MapJs.SetPointsAsync(PointsJson);
+        }
+
+        if (UserLat is { } lat && UserLng is { } lng && (lat, lng) != _lastUser)
+        {
+            _lastUser = (lat, lng);
+            await MapJs.SetUserPositionAsync(lat, lng);
         }
     }
 

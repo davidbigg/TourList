@@ -33,6 +33,18 @@ public sealed class MapInterop(IJSRuntime js) : IAsyncDisposable
         await module.InvokeVoidAsync("setFilter", visibleListIdsJson);
     }
 
+    public async Task SetRouteAsync(string? routeGeoJson)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("setRoute", routeGeoJson);
+    }
+
+    public async Task SetUserPositionAsync(double latitude, double longitude)
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("setUserPosition", latitude, longitude);
+    }
+
     public async Task SetThemeAsync(string theme)
     {
         var module = await ModuleAsync();

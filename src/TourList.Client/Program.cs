@@ -18,4 +18,8 @@ builder.Services.AddTransient<MapInterop>(); // component-owned JS module; dispo
 builder.Services.AddScoped<IRouteStore, LocalRouteStore>();
 builder.Services.AddScoped<RouteBuilderState>();
 
+// Driving view: offline route cache + device geolocation.
+builder.Services.AddScoped<OpenedRouteCache>();
+builder.Services.AddTransient<GeolocationInterop>(); // component-owned by DrivingView
+
 await builder.Build().RunAsync();

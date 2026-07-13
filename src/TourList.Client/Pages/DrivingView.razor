@@ -1,0 +1,168 @@
+@page "/drive/{Id:guid}"
+@implements IAsyncDisposable
+@inject OpenedRouteCache Cache
+@inject GeolocationInterop Geo
+@inject ThemeService Theme
+@inject NavigationManager Nav
+@using System.Text.Json
+@using TourList.Shared.Navigation
+
+<PageTitle>TourList · Drive</PageTitle>
+
+@if (_loading)
+{
+    <div class="page"><div class="page-card surface"><div class="empty">Loading route…</div></div></div>
+}
+else if (_route is null)
+{
+    <div class="page">
+        <div class="page-card surface">
+            <div class="page-head"><div class="t">Route not found</div><div class="nav"><a href="/routes">My routes</a></div></div>
+            <div class="page-body"><div class="empty">This route isn't available on this device. Open it from <a href="/routes">My routes</a>.</div></div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="browse">
+        <Map PointsJson="@PointsJson()" RouteJson="@RouteLineJson()" UserLat="_userLat" UserLng="_userLng" Theme="@Theme.CssClass" />
+
+        <div class="switcher surface">
+            <a class="back" href="/routes" title="Back to routes">←</a>
+            <span class="label">@_route.Name</span>
+        </div>
+
+        <ThemeControl />
+
+        @if (!_liveAvailable)
+        {
+            <div class="gps-banner surface">
+                📍 Location @(_gpsReason == "denied" ? "permission denied" : "unavailable") — stops and navigation still work; enable location to see your position.
+            </div>
+        }
+
+        <aside class="listpanel surface">
+            <div class="grip"></div>
+            <div class="ph">
+                <div class="t">@_route.Name</div>
+                <div class="m">@_route.Stops.Count stops · @_route.Stops.Count(s => s.Visited) visited@(_liveAvailable ? " · live" : "")</div>
+            </div>
+            <div class="rows">
+                @foreach (var (stop, i) in _route.Stops.OrderBy(s => s.Order).Select((s, idx) => (s, idx)))
+                {
+                    <div class="row" @key="stop.Id">
+                        <button class="n @(stop.Visited ? "done" : null)" title="Mark visited" @onclick="() => ToggleVisitedAsync(stop)">@(stop.Visited ? "✓" : (i + 1).ToString())</button>
+                        <div class="rt">
+                            <div class="a1">@stop.SnapshotAddress</div>
+                            @if (!string.IsNullOrWhiteSpace(stop.SnapshotNotes))
+                            {
+                                <div class="a2">@stop.SnapshotNotes</div>
+                            }
+                        </div>
+                        <button class="btn pri sm" @onclick="() => NavigateToStopAsync(stop)">Navigate</button>
+                    </div>
+                }
+            </div>
+        </aside>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private RouteDto? _route;
+    private bool _loading = true;
+    private double? _userLat;
+    private double? _userLng;
+    private bool _liveAvailable;
+    private string? _gpsReason;
+    private string _platform = "other";
+    private DotNetObjectReference<DrivingView>? _selfRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _route = await Cache.GetAsync(Id);   // read ONLY from IndexedDB → offline-durable
+        _platform = await Geo.PlatformAsync();
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _route is not null)
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            await Geo.StartWatchAsync(_selfRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnPositionChanged(double latitude, double longitude, double accuracy)
+    {
+        _userLat = latitude;
+        _userLng = longitude;
+        _liveAvailable = true;
+        _gpsReason = null;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnPositionError(string reason)
+    {
+        _liveAvailable = false;
+        _gpsReason = reason;
+        _userLat = _userLng = null;
+        StateHasChanged();
+    }
+
+    private async Task ToggleVisitedAsync(RouteStopDto stop)
+    {
+        stop.Visited = !stop.Visited;
+        await Cache.CacheAsync(_route!); // persist visited to the offline cache
+    }
+
+    private async Task NavigateToStopAsync(RouteStopDto stop)
+    {
+        var platform = ExternalMapsLink.PlatformFor(_platform);
+        var url = _liveAvailable
+            ? ExternalMapsLink.Build(platform, stop.SnapshotLatitude, stop.SnapshotLongitude, _userLat, _userLng)
+            : ExternalMapsLink.Build(platform, stop.SnapshotLatitude, stop.SnapshotLongitude);
+        await Geo.OpenExternalAsync(url);
+    }
+
+    private string PointsJson() => JsonSerializer.Serialize(
+        (_route?.Stops ?? []).OrderBy(s => s.Order).Select(s => new
+        {
+            id = s.Id,
+            lat = s.SnapshotLatitude,
+            lng = s.SnapshotLongitude,
+            color = "#5eead4",
+            title = s.SnapshotAddress,
+            subtitle = (string?)null,
+        }));
+
+    private string? RouteLineJson()
+    {
+        var stops = (_route?.Stops ?? []).OrderBy(s => s.Order).ToList();
+        if (stops.Count < 2)
+        {
+            return null;
+        }
+
+        var line = new
+        {
+            type = "Feature",
+            geometry = new
+            {
+                type = "LineString",
+                coordinates = stops.Select(s => new[] { s.SnapshotLongitude, s.SnapshotLatitude }),
+            },
+        };
+        return JsonSerializer.Serialize(line);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Geo.StopWatchAsync();
+        _selfRef?.Dispose();
+    }
+}

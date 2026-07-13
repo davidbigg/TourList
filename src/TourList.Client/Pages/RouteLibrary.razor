@@ -1,6 +1,7 @@
 @page "/routes"
 @inject IRouteStore Routes
 @inject RouteBuilderState Builder
+@inject OpenedRouteCache Opened
 @inject NavigationManager Nav
 
 <PageTitle>TourList · My routes</PageTitle>
@@ -37,6 +38,7 @@
                             <div class="a2">@route.Stops.Count stop@(route.Stops.Count == 1 ? "" : "s") · start: @StartLabel(route)</div>
                         </div>
                         <div class="ord">
+                            <button class="btn pri" disabled="@(route.Stops.Count == 0)" @onclick="() => DriveAsync(route)">Drive</button>
                             <button class="btn" @onclick="() => Edit(route)">Edit</button>
                             <button class="btn danger" @onclick="() => DeleteAsync(route.Id)">Delete</button>
                         </div>
@@ -64,6 +66,13 @@
     {
         Builder.LoadForEdit(route);
         Nav.NavigateTo("/build");
+    }
+
+    private async Task DriveAsync(RouteDto route)
+    {
+        // Cache the full aggregate to IndexedDB, then the Driving View reads only from there.
+        await Opened.CacheAsync(route);
+        Nav.NavigateTo($"/drive/{route.Id}");
     }
 
     private async Task DeleteAsync(Guid id)
