@@ -1,8 +1,13 @@
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using TourList.Server.Data;
 using TourList.Server.Options;
+using TourList.Server.Services;
+using TourList.Server.Services.Geocoding;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +80,19 @@ builder.Services.AddAntiforgery(options =>
 // ViewFeatures are registered for the global AutoValidateAntiforgeryToken filter below.
 builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+
+// ---- Azure Maps geocoding (disabled until configured; see AzureMapsOptions) ----
+builder.Services.AddOptions<AzureMapsOptions>()
+    .Bind(builder.Configuration.GetSection(AzureMapsOptions.SectionName));
+builder.Services.AddSingleton<TokenCredential>(_ => new DefaultAzureCredential());
+builder.Services.AddTransient<AzureMapsAuthHandler>();
+builder.Services.AddHttpClient<IGeocoder, AzureMapsGeocoder>((sp, client) =>
+{
+    var maps = sp.GetRequiredService<IOptions<AzureMapsOptions>>().Value;
+    client.BaseAddress = new Uri(maps.GeocodingEndpoint);
+}).AddHttpMessageHandler<AzureMapsAuthHandler>();
+
+builder.Services.AddScoped<EntryService>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
