@@ -22,11 +22,17 @@ namespace TourList.Server.Controllers;
 public sealed class AuthController(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
+    IPasswordHasher<ApplicationUser> passwordHasher,
     IEmailDispatcher emailSender,
     IOptions<AcsEmailOptions> emailOptions,
     IHostEnvironment environment,
     ILogger<AuthController> logger) : ControllerBase
 {
+    // A password hash computed once and reused to spend equivalent CPU on the login path when no real
+    // password verification would otherwise occur (unknown / inactive account) — see Login.
+    private const string DummyPassword = "timing-equalization-placeholder";
+    private static string? _dummyPasswordHash;
+
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthUserDto>> Register(RegisterRequest request)
@@ -58,6 +64,13 @@ public sealed class AuthController(
         // Uniform response for unknown user / inactive / wrong password (avoids user enumeration).
         if (user is null || !user.IsActive)
         {
+            // Constant-time guard: this branch does no password hashing, so without matching work it
+            // returns far faster than the wrong-password branch below — letting an attacker enumerate
+            // accounts by response time. Verify the supplied password against a cached dummy hash
+            // (computed once) and discard the result so the CPU cost mirrors a real verification.
+            _dummyPasswordHash ??= passwordHasher.HashPassword(new ApplicationUser(), DummyPassword);
+            passwordHasher.VerifyHashedPassword(new ApplicationUser(), _dummyPasswordHash, request.Password);
+
             return Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Invalid email or password.");
         }
 

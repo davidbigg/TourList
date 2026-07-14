@@ -85,6 +85,22 @@ public sealed class AuthFlowTests : IDisposable
         Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
     }
 
+    [Fact]
+    public async Task Login_with_unknown_email_is_unauthorized()
+    {
+        // Exercises the unknown-account branch, which runs the constant-time dummy password
+        // verification before returning — a broken hasher call would surface here as a 500.
+        var client = NewClient();
+
+        var token = await client.GetStringAsync("/api/antiforgery/token");
+        client.DefaultRequestHeaders.Add("X-XSRF-TOKEN", token);
+
+        var resp = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest { Email = $"nobody-{Guid.NewGuid():N}@tourlist.local", Password = "whatever-Passw0rd" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
+
     private sealed class Factory(string connectionString) : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
