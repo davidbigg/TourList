@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.Hosting;
@@ -72,6 +73,18 @@ public static class Extensions
         });
 
         builder.Services.AddOpenTelemetry()
+            // Attach a resource descriptor so traces/metrics/logs carry service.name in dashboards.
+            // Aspire's AppHost injects OTEL_SERVICE_NAME (+ OTEL_RESOURCE_ATTRIBUTES) at orchestration
+            // time; honor that when present and only fall back to the application name for standalone
+            // / non-Aspire hosts. (In OpenTelemetry .NET a code-configured AddService otherwise takes
+            // precedence over the env-var detector, which would relabel the service under Aspire.)
+            .ConfigureResource(resource =>
+            {
+                if (string.IsNullOrEmpty(builder.Configuration["OTEL_SERVICE_NAME"]))
+                {
+                    resource.AddService(builder.Environment.ApplicationName);
+                }
+            })
             .WithMetrics(metrics =>
             {
                 metrics.AddAspNetCoreInstrumentation()
