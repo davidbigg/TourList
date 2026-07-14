@@ -27,7 +27,13 @@ public sealed class AdminUserService(AppDbContext db, UserManager<ApplicationUse
     public async Task<List<AdminUserDto>> ListAsync(CancellationToken ct)
     {
         var all = await db.Users.OrderBy(u => u.Email).ToListAsync(ct);
-        var adminIds = (await users.GetUsersInRoleAsync(RoleNames.Admin)).Select(u => u.Id).ToHashSet();
+
+        var adminIds = new HashSet<Guid>();
+        if (await AdminRoleIdAsync(ct) is Guid roleId)
+        {
+            var ids = await db.UserRoles.Where(ur => ur.RoleId == roleId).Select(ur => ur.UserId).ToListAsync(ct);
+            adminIds = ids.ToHashSet();
+        }
 
         var routeCounts = await db.Routes
             .GroupBy(r => r.OwnerUserId)
@@ -46,7 +52,7 @@ public sealed class AdminUserService(AppDbContext db, UserManager<ApplicationUse
     }
 
     public Task<AdminActionOutcome> PromoteAsync(Guid userId, CancellationToken ct) =>
-        MutateAsync(userId, guard: false, async user =>
+        MutateAsync(userId, guard: false, async (user, _) =>
         {
             if (!await users.IsInRoleAsync(user, RoleNames.Admin))
             {
@@ -55,7 +61,7 @@ public sealed class AdminUserService(AppDbContext db, UserManager<ApplicationUse
         }, ct);
 
     public Task<AdminActionOutcome> DemoteAsync(Guid userId, CancellationToken ct) =>
-        MutateAsync(userId, guard: true, async user =>
+        MutateAsync(userId, guard: true, async (user, _) =>
         {
             if (await users.IsInRoleAsync(user, RoleNames.Admin))
             {
@@ -64,7 +70,7 @@ public sealed class AdminUserService(AppDbContext db, UserManager<ApplicationUse
         }, ct);
 
     public Task<AdminActionOutcome> DeactivateAsync(Guid userId, CancellationToken ct) =>
-        MutateAsync(userId, guard: true, async user =>
+        MutateAsync(userId, guard: true, async (user, _) =>
         {
             user.IsActive = false;
             await users.UpdateAsync(user);
@@ -72,14 +78,14 @@ public sealed class AdminUserService(AppDbContext db, UserManager<ApplicationUse
         }, ct);
 
     public Task<AdminActionOutcome> ReactivateAsync(Guid userId, CancellationToken ct) =>
-        MutateAsync(userId, guard: false, async user =>
+        MutateAsync(userId, guard: false, async (user, _) =>
         {
             user.IsActive = true;
             await users.UpdateAsync(user);
         }, ct);
 
     public Task<AdminActionOutcome> RemoveAsync(Guid userId, CancellationToken ct) =>
-        MutateAsync(userId, guard: true, async user =>
+        MutateAsync(userId, guard: true, async (user, _) =>
         {
             await users.DeleteAsync(user); // FK cascade purges the user's routes
         }, ct);
@@ -88,7 +94,14 @@ public sealed class AdminUserService(AppDbContext db, UserManager<ApplicationUse
     /// Runs check+mutate in a serializable transaction. When <paramref name="guard"/> is set and the
     /// target is an active admin, the mutation is blocked unless another active admin remains.
     /// </summary>
-    private async Task<AdminActionOutcome> MutateAsync(Guid userId, bool guard, Func<ApplicationUser, Task> mutate, CancellationToken ct)
+    /// <remarks>
+    /// The <paramref name="mutate"/> delegate is handed the <see cref="CancellationToken"/>, but the
+    /// role/stamp operations in the closures go through <see cref="UserManager{TUser}"/>, whose public
+    /// API exposes no per-call token — so those calls discard it and run under UserManager's own token.
+    /// The token IS honored by the guard queries and the surrounding transaction here.
+    /// </remarks>
+    private async Task<AdminActionOutcome> MutateAsync(
+        Guid userId, bool guard, Func<ApplicationUser, CancellationToken, Task> mutate, CancellationToken ct)
     {
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
@@ -101,19 +114,48 @@ public sealed class AdminUserService(AppDbContext db, UserManager<ApplicationUse
                 return AdminActionOutcome.NotFound;
             }
 
-            if (guard && user.IsActive && await users.IsInRoleAsync(user, RoleNames.Admin))
+            if (guard && user.IsActive && await WouldStrandActiveAdminsAsync(userId, ct))
             {
-                var admins = await users.GetUsersInRoleAsync(RoleNames.Admin);
-                var otherActiveAdmins = admins.Count(a => a.Id != userId && a.IsActive);
-                if (otherActiveAdmins == 0)
-                {
-                    return AdminActionOutcome.WouldRemoveLastActiveAdmin;
-                }
+                return AdminActionOutcome.WouldRemoveLastActiveAdmin;
             }
 
-            await mutate(user);
+            await mutate(user, ct);
             await tx.CommitAsync(ct);
             return AdminActionOutcome.Ok;
         });
+    }
+
+    /// <summary>
+    /// True when <paramref name="userId"/> is an active admin and no <i>other</i> active admin remains
+    /// — i.e. demoting / deactivating / removing them would drop the active-admin count to zero. Runs
+    /// as ct-aware EF queries against the Identity role tables (UserManager's role APIs take no token),
+    /// inside the caller's serializable transaction.
+    /// </summary>
+    private async Task<bool> WouldStrandActiveAdminsAsync(Guid userId, CancellationToken ct)
+    {
+        if (await AdminRoleIdAsync(ct) is not Guid roleId)
+        {
+            return false; // no Admin role exists → nothing to strand
+        }
+
+        var targetIsAdmin = await db.UserRoles.AnyAsync(ur => ur.UserId == userId && ur.RoleId == roleId, ct);
+        if (!targetIsAdmin)
+        {
+            return false;
+        }
+
+        var otherActiveAdmins = await db.Users.CountAsync(
+            u => u.Id != userId && u.IsActive && db.UserRoles.Any(ur => ur.UserId == u.Id && ur.RoleId == roleId),
+            ct);
+        return otherActiveAdmins == 0;
+    }
+
+    private async Task<Guid?> AdminRoleIdAsync(CancellationToken ct)
+    {
+        var normalizedName = users.NormalizeName(RoleNames.Admin);
+        return await db.Roles
+            .Where(r => r.NormalizedName == normalizedName)
+            .Select(r => (Guid?)r.Id)
+            .FirstOrDefaultAsync(ct);
     }
 }
