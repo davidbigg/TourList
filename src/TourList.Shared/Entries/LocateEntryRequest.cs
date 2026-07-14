@@ -9,13 +9,13 @@ namespace TourList.Shared.Entries;
 public sealed class LocateEntryRequest
 {
     [Range(-90, 90)]
-    public double? Latitude { get; set; }
+    public double? Latitude { get; init; }
 
     [Range(-180, 180)]
-    public double? Longitude { get; set; }
+    public double? Longitude { get; init; }
 
     [StringLength(500)]
-    public string? CorrectedAddress { get; set; }
+    public string? CorrectedAddress { get; init; }
 
     public bool HasManualPin => Latitude.HasValue && Longitude.HasValue;
     public bool HasCorrectedAddress => !string.IsNullOrWhiteSpace(CorrectedAddress);

@@ -7,9 +7,9 @@ public sealed class RegisterRequest
 {
     [Required]
     [EmailAddress]
-    public required string Email { get; set; }
+    public required string Email { get; init; }
 
     [Required]
     [StringLength(128, MinimumLength = 8)]
-    public required string Password { get; set; }
+    public required string Password { get; init; }
 }

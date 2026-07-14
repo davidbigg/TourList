@@ -93,7 +93,7 @@ public sealed class RouteMergeTests(SqlServerContainerFixture fixture)
         using (var scope = sp.CreateScope())
         {
             var svc = scope.ServiceProvider.GetRequiredService<RouteService>();
-            await svc.UpsertAsync(userId, Route("Original name", ("10 Pine St", 47.65, -122.35, "x")), default);
+            await svc.UpsertAsync(userId, Route("Original name", ("10 Pine St", 47.65, -122.35, "x")), routeId: null, default);
         }
 
         using (var scope = sp.CreateScope())
@@ -124,7 +124,7 @@ public sealed class RouteMergeTests(SqlServerContainerFixture fixture)
         using (var scope = sp.CreateScope())
         {
             var svc = scope.ServiceProvider.GetRequiredService<RouteService>();
-            await svc.UpsertAsync(userId, Route("Trip", ("100 First Ave", 47.60, -122.33, "original")), default);
+            await svc.UpsertAsync(userId, Route("Trip", ("100 First Ave", 47.60, -122.33, "original")), routeId: null, default);
         }
 
         using (var scope = sp.CreateScope())

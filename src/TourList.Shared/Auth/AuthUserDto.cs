@@ -6,9 +6,9 @@ namespace TourList.Shared.Auth;
 /// </summary>
 public sealed class AuthUserDto
 {
-    public required string Email { get; set; }
+    public required string Email { get; init; }
 
-    public IReadOnlyList<string> Roles { get; set; } = [];
+    public IReadOnlyList<string> Roles { get; init; } = [];
 
     public bool IsAdmin => Roles.Contains(RoleNames.Admin);
 }

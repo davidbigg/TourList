@@ -8,22 +8,22 @@ namespace TourList.Shared.Routes;
 /// </summary>
 public sealed class RouteDto
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
 
-    public required string Name { get; set; }
+    public required string Name { get; init; }
 
-    public StartPointType StartPointType { get; set; } = StartPointType.CurrentLocation;
+    public StartPointType StartPointType { get; init; } = StartPointType.CurrentLocation;
 
     /// <summary>When <see cref="StartPointType"/> is Stop, the id of the stop used as the origin.</summary>
-    public Guid? StartStopId { get; set; }
+    public Guid? StartStopId { get; init; }
 
     /// <summary>When <see cref="StartPointType"/> is Manual, the chosen origin coordinate + label.</summary>
-    public double? StartLatitude { get; set; }
-    public double? StartLongitude { get; set; }
-    public string? StartLabel { get; set; }
+    public double? StartLatitude { get; init; }
+    public double? StartLongitude { get; init; }
+    public string? StartLabel { get; init; }
 
-    public List<RouteStopDto> Stops { get; set; } = [];
+    public List<RouteStopDto> Stops { get; init; } = [];
 
-    public DateTime CreatedUtc { get; set; }
-    public DateTime UpdatedUtc { get; set; }
+    public DateTime CreatedUtc { get; init; }
+    public DateTime UpdatedUtc { get; init; }
 }

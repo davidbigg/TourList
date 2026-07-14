@@ -6,8 +6,8 @@ public sealed class UpdateEntryRequest
 {
     [Required]
     [StringLength(500, MinimumLength = 1)]
-    public required string RawAddress { get; set; }
+    public required string RawAddress { get; init; }
 
     [StringLength(2000)]
-    public string? Notes { get; set; }
+    public string? Notes { get; init; }
 }

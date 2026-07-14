@@ -44,7 +44,10 @@ public sealed class RouteMergeService(AppDbContext db, RouteService routeService
             var takenIds = existingRoutes.Select(r => r.Id).ToHashSet();
             var existingEntryIds = await routeService.ExistingEntryIdsAsync(guestRoutes, ct);
 
-            var response = new MergeRoutesResponse();
+            var results = new List<MergeRouteResult>();
+            var createdCount = 0;
+            var dedupedCount = 0;
+            var renamedCount = 0;
             var now = DateTime.UtcNow;
 
             foreach (var guest in guestRoutes)
@@ -52,14 +55,14 @@ public sealed class RouteMergeService(AppDbContext db, RouteService routeService
                 var fingerprint = RouteFingerprint.Compute(guest);
                 if (byFingerprint.TryGetValue(fingerprint, out var match))
                 {
-                    response.Results.Add(new MergeRouteResult
+                    results.Add(new MergeRouteResult
                     {
                         ClientId = guest.Id,
                         Outcome = RouteMergeOutcome.DedupedExisting,
                         ServerRouteId = match.Id,
                         FinalName = match.Name,
                     });
-                    response.Counts.Deduped++;
+                    dedupedCount++;
                     continue;
                 }
 
@@ -85,7 +88,7 @@ public sealed class RouteMergeService(AppDbContext db, RouteService routeService
 
                 byFingerprint[fingerprint] = route;
                 takenNames.Add(finalName);
-                response.Results.Add(new MergeRouteResult
+                results.Add(new MergeRouteResult
                 {
                     ClientId = guest.Id,
                     Outcome = renamed ? RouteMergeOutcome.RenamedCopy : RouteMergeOutcome.Created,
@@ -94,18 +97,27 @@ public sealed class RouteMergeService(AppDbContext db, RouteService routeService
                 });
                 if (renamed)
                 {
-                    response.Counts.Renamed++;
+                    renamedCount++;
                 }
                 else
                 {
-                    response.Counts.Created++;
+                    createdCount++;
                 }
             }
 
             user.GuestRoutesMigratedUtc = now;
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
-            return response;
+            return new MergeRoutesResponse
+            {
+                Results = results,
+                Counts = new MergeCounts
+                {
+                    Created = createdCount,
+                    Deduped = dedupedCount,
+                    Renamed = renamedCount,
+                },
+            };
         });
     }
 

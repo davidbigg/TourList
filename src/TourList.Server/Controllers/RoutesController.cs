@@ -31,7 +31,7 @@ public sealed class RoutesController(RouteService routes, RouteMergeService merg
     public async Task<ActionResult<RouteDto>> Create(RouteDto route, CancellationToken ct)
     {
         var userId = User.GetUserId()!.Value;
-        var result = await routes.UpsertAsync(userId, route, ct);
+        var result = await routes.UpsertAsync(userId, route, routeId: null, ct);
         return ToActionResult(result, id => CreatedAtAction(nameof(Get), new { id }, result.Route));
     }
 
@@ -39,8 +39,9 @@ public sealed class RoutesController(RouteService routes, RouteMergeService merg
     public async Task<ActionResult<RouteDto>> Upsert(Guid id, RouteDto route, CancellationToken ct)
     {
         var userId = User.GetUserId()!.Value;
-        route.Id = id; // route template is authoritative
-        var result = await routes.UpsertAsync(userId, route, ct);
+        // The URL id is authoritative (the route template). Passed explicitly so the immutable DTO
+        // is not mutated in place.
+        var result = await routes.UpsertAsync(userId, route, id, ct);
         return ToActionResult(result, _ => Ok(result.Route));
     }
 

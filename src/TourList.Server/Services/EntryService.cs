@@ -118,8 +118,10 @@ public sealed class EntryService(AppDbContext db, IGeocoder geocoder)
         }
 
         var parsed = CsvEntryParser.Parse(csv);
-        var result = new CsvImportResult();
-        result.ParseFailures.AddRange(parsed.Failures);
+        var parseFailures = new List<CsvParseFailure>(parsed.Failures);
+        var duplicateWarnings = new List<CsvDuplicateWarning>();
+        var geocodeFailures = new List<CsvGeocodeFailure>();
+        var imported = new List<EntryDto>();
 
         var existingAddresses = await db.Entries
             .Where(e => e.ListId == listId)
@@ -131,7 +133,7 @@ public sealed class EntryService(AppDbContext db, IGeocoder geocoder)
         {
             if (!seen.Add(row.Address))
             {
-                result.DuplicateWarnings.Add(new CsvDuplicateWarning
+                duplicateWarnings.Add(new CsvDuplicateWarning
                 {
                     RowNumber = row.RowNumber,
                     Address = row.Address,
@@ -153,7 +155,7 @@ public sealed class EntryService(AppDbContext db, IGeocoder geocoder)
 
             if (entry.GeocodeStatus == GeocodeStatus.Unlocatable)
             {
-                result.GeocodeFailures.Add(new CsvGeocodeFailure
+                geocodeFailures.Add(new CsvGeocodeFailure
                 {
                     RowNumber = row.RowNumber,
                     EntryId = entry.Id,
@@ -163,21 +165,27 @@ public sealed class EntryService(AppDbContext db, IGeocoder geocoder)
             }
             else
             {
-                result.Imported.Add(entry.ToDto());
+                imported.Add(entry.ToDto());
             }
         }
 
         await db.SaveChangesAsync(ct);
 
-        result.Summary = new CsvImportSummary
+        return new CsvImportResult
         {
-            TotalRows = parsed.Rows.Count + parsed.Failures.Count,
-            Imported = result.Imported.Count,
-            GeocodeFailures = result.GeocodeFailures.Count,
-            ParseFailures = result.ParseFailures.Count,
-            DuplicateWarnings = result.DuplicateWarnings.Count,
+            Imported = imported,
+            GeocodeFailures = geocodeFailures,
+            ParseFailures = parseFailures,
+            DuplicateWarnings = duplicateWarnings,
+            Summary = new CsvImportSummary
+            {
+                TotalRows = parsed.Rows.Count + parsed.Failures.Count,
+                Imported = imported.Count,
+                GeocodeFailures = geocodeFailures.Count,
+                ParseFailures = parseFailures.Count,
+                DuplicateWarnings = duplicateWarnings.Count,
+            },
         };
-        return result;
     }
 
     private static void ApplyGeocode(Entry entry, GeocodeResult result)

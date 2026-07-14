@@ -3,10 +3,10 @@ namespace TourList.Shared.Admin;
 /// <summary>A user row in the admin user-management screen.</summary>
 public sealed class AdminUserDto
 {
-    public Guid Id { get; set; }
-    public required string Email { get; set; }
-    public bool IsAdmin { get; set; }
-    public bool IsActive { get; set; }
-    public int RouteCount { get; set; }
-    public DateTime CreatedUtc { get; set; }
+    public Guid Id { get; init; }
+    public required string Email { get; init; }
+    public bool IsAdmin { get; init; }
+    public bool IsActive { get; init; }
+    public int RouteCount { get; init; }
+    public DateTime CreatedUtc { get; init; }
 }

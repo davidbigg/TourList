@@ -8,43 +8,43 @@ namespace TourList.Shared.Entries;
 /// </summary>
 public sealed class CsvImportResult
 {
-    public List<EntryDto> Imported { get; set; } = [];
-    public List<CsvGeocodeFailure> GeocodeFailures { get; set; } = [];
-    public List<CsvParseFailure> ParseFailures { get; set; } = [];
-    public List<CsvDuplicateWarning> DuplicateWarnings { get; set; } = [];
-    public CsvImportSummary Summary { get; set; } = new();
+    public List<EntryDto> Imported { get; init; } = [];
+    public List<CsvGeocodeFailure> GeocodeFailures { get; init; } = [];
+    public List<CsvParseFailure> ParseFailures { get; init; } = [];
+    public List<CsvDuplicateWarning> DuplicateWarnings { get; init; } = [];
+    public CsvImportSummary Summary { get; init; } = new();
 }
 
 /// <summary>An entry was created from the row but flagged Unlocatable.</summary>
 public sealed class CsvGeocodeFailure
 {
-    public int RowNumber { get; set; }
-    public Guid EntryId { get; set; }
-    public required string Address { get; set; }
-    public required string Reason { get; set; }
+    public int RowNumber { get; init; }
+    public Guid EntryId { get; init; }
+    public required string Address { get; init; }
+    public required string Reason { get; init; }
 }
 
 /// <summary>A row could not be parsed into an entry; nothing was created.</summary>
 public sealed class CsvParseFailure
 {
-    public int RowNumber { get; set; }
-    public string? RawLine { get; set; }
-    public required string Reason { get; set; }
+    public int RowNumber { get; init; }
+    public string? RawLine { get; init; }
+    public required string Reason { get; init; }
 }
 
 /// <summary>A row's address duplicates another address already in the list (warning only).</summary>
 public sealed class CsvDuplicateWarning
 {
-    public int RowNumber { get; set; }
-    public required string Address { get; set; }
-    public required string Message { get; set; }
+    public int RowNumber { get; init; }
+    public required string Address { get; init; }
+    public required string Message { get; init; }
 }
 
 public sealed class CsvImportSummary
 {
-    public int TotalRows { get; set; }
-    public int Imported { get; set; }
-    public int GeocodeFailures { get; set; }
-    public int ParseFailures { get; set; }
-    public int DuplicateWarnings { get; set; }
+    public int TotalRows { get; init; }
+    public int Imported { get; init; }
+    public int GeocodeFailures { get; init; }
+    public int ParseFailures { get; init; }
+    public int DuplicateWarnings { get; init; }
 }

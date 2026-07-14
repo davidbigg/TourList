@@ -3,7 +3,7 @@ namespace TourList.Shared.Routes;
 /// <summary>Guest routes uploaded for one-time migration into the authenticated account.</summary>
 public sealed class MergeRoutesRequest
 {
-    public List<RouteDto> Routes { get; set; } = [];
+    public List<RouteDto> Routes { get; init; } = [];
 }
 
 public enum RouteMergeOutcome
@@ -20,26 +20,26 @@ public enum RouteMergeOutcome
 
 public sealed class MergeRouteResult
 {
-    public Guid ClientId { get; set; }
-    public RouteMergeOutcome Outcome { get; set; }
-    public Guid ServerRouteId { get; set; }
-    public required string FinalName { get; set; }
+    public Guid ClientId { get; init; }
+    public RouteMergeOutcome Outcome { get; init; }
+    public Guid ServerRouteId { get; init; }
+    public required string FinalName { get; init; }
 }
 
 public sealed class MergeCounts
 {
-    public int Created { get; set; }
-    public int Deduped { get; set; }
-    public int Renamed { get; set; }
+    public int Created { get; init; }
+    public int Deduped { get; init; }
+    public int Renamed { get; init; }
 }
 
 /// <summary>Outcome of the one-time guest→account merge (acceptance scenario 13).</summary>
 public sealed class MergeRoutesResponse
 {
     /// <summary>True when the account had already migrated — the request was a no-op.</summary>
-    public bool AlreadyMigrated { get; set; }
+    public bool AlreadyMigrated { get; init; }
 
-    public List<MergeRouteResult> Results { get; set; } = [];
+    public List<MergeRouteResult> Results { get; init; } = [];
 
-    public MergeCounts Counts { get; set; } = new();
+    public MergeCounts Counts { get; init; } = new();
 }

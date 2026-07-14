@@ -33,9 +33,12 @@ public sealed class RouteService(AppDbContext db)
         return route?.ToDto();
     }
 
-    public async Task<UpsertResult> UpsertAsync(Guid userId, RouteDto dto, CancellationToken ct)
+    public async Task<UpsertResult> UpsertAsync(Guid userId, RouteDto dto, Guid? routeId, CancellationToken ct)
     {
-        var existing = await db.Routes.Include(r => r.Stops).FirstOrDefaultAsync(r => r.Id == dto.Id, ct);
+        // For PUT the URL id is authoritative; for POST fall back to the body id. Either way the
+        // (immutable) DTO is never mutated — the resolved id flows through this local only.
+        var effectiveId = routeId ?? dto.Id;
+        var existing = await db.Routes.Include(r => r.Stops).FirstOrDefaultAsync(r => r.Id == effectiveId, ct);
         if (existing is not null && existing.OwnerUserId != userId)
         {
             return new UpsertResult(UpsertStatus.Forbidden, null);
@@ -43,7 +46,7 @@ public sealed class RouteService(AppDbContext db)
 
         // (OwnerUserId, Name) uniqueness — enforced here (a filtered unique index is the DB backstop).
         var nameTaken = await db.Routes.AnyAsync(
-            r => r.OwnerUserId == userId && r.Id != dto.Id && r.Name == dto.Name, ct);
+            r => r.OwnerUserId == userId && r.Id != effectiveId && r.Name == dto.Name, ct);
         if (nameTaken)
         {
             return new UpsertResult(UpsertStatus.NameConflict, null);
@@ -56,7 +59,7 @@ public sealed class RouteService(AppDbContext db)
         {
             var route = new SavedRoute
             {
-                Id = dto.Id == Guid.Empty ? Guid.NewGuid() : dto.Id,
+                Id = effectiveId == Guid.Empty ? Guid.NewGuid() : effectiveId,
                 OwnerUserId = userId,
                 CreatedUtc = now,
             };

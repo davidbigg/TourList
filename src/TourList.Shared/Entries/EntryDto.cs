@@ -5,15 +5,15 @@ namespace TourList.Shared.Entries;
 /// <summary>An entry as returned to clients (browse map + admin management).</summary>
 public sealed class EntryDto
 {
-    public Guid Id { get; set; }
-    public Guid ListId { get; set; }
-    public required string RawAddress { get; set; }
-    public string? FormattedAddress { get; set; }
-    public string? Notes { get; set; }
-    public double? Latitude { get; set; }
-    public double? Longitude { get; set; }
-    public GeocodeStatus GeocodeStatus { get; set; }
-    public string? GeocodeConfidence { get; set; }
-    public bool ManuallyLocated { get; set; }
-    public DateTime? LastGeocodedUtc { get; set; }
+    public Guid Id { get; init; }
+    public Guid ListId { get; init; }
+    public required string RawAddress { get; init; }
+    public string? FormattedAddress { get; init; }
+    public string? Notes { get; init; }
+    public double? Latitude { get; init; }
+    public double? Longitude { get; init; }
+    public GeocodeStatus GeocodeStatus { get; init; }
+    public string? GeocodeConfidence { get; init; }
+    public bool ManuallyLocated { get; init; }
+    public DateTime? LastGeocodedUtc { get; init; }
 }
