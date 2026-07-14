@@ -1,6 +1,7 @@
 using Azure;
 using Azure.Communication.Email;
 using Azure.Core;
+using Azure.Identity;
 using Microsoft.Extensions.Options;
 using TourList.Server.Options;
 
@@ -52,10 +53,18 @@ public sealed class AcsEmailSender : IEmailDispatcher
             await _client.SendAsync(WaitUntil.Started, message, ct);
             _logger.LogInformation("Queued password reset email to {Email}.", toEmail);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // Swallow the expected delivery-failure modes so the request never fails (and never reveals
+        // account existence). Cancellation and unexpected exceptions propagate.
+        catch (RequestFailedException ex)
         {
-            // Never fail the request (and never reveal existence) — log for diagnosis.
-            _logger.LogError(ex, "Failed to send password reset email to {Email}.", toEmail);
+            LogFailure(ex);
         }
+        catch (AuthenticationFailedException ex)
+        {
+            LogFailure(ex);
+        }
+
+        void LogFailure(Exception ex) =>
+            _logger.LogError(ex, "Failed to send password reset email to {Email}.", toEmail);
     }
 }

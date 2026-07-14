@@ -1,4 +1,5 @@
 using Azure.Core;
+using Azure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -46,7 +47,9 @@ public sealed class MapsController(
                 ExpiresOnUtc = token.ExpiresOn.UtcDateTime,
             });
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // Only the expected token-acquisition failure degrades to 502. Cancellation and any
+        // unexpected exception propagate to the global handler (500) rather than being masked.
+        catch (AuthenticationFailedException ex)
         {
             logger.LogError(ex, "Failed to mint an Azure Maps token.");
             return Problem(

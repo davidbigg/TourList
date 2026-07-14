@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using Azure.Identity;
 using Microsoft.Extensions.Options;
 using TourList.Server.Options;
 
@@ -42,7 +44,22 @@ public sealed class AzureMapsGeocoder(
             var parsed = await response.Content.ReadFromJsonAsync<GeocodingResponse>(cancellationToken: ct);
             return GeocodeGate.Evaluate(parsed);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // Expected external failures (network, token acquisition, malformed response body) degrade
+        // to Unlocatable; cancellation and unexpected exceptions propagate so real bugs aren't masked.
+        catch (HttpRequestException ex)
+        {
+            return LogAndFail(ex);
+        }
+        catch (AuthenticationFailedException ex)
+        {
+            return LogAndFail(ex);
+        }
+        catch (JsonException ex)
+        {
+            return LogAndFail(ex);
+        }
+
+        GeocodeResult LogAndFail(Exception ex)
         {
             logger.LogError(ex, "Geocoding request failed for {Address}.", address);
             return GeocodeResult.Unlocatable("Geocoding request failed.");
