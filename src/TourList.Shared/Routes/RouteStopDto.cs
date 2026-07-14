@@ -14,7 +14,7 @@ public sealed class RouteStopDto
     /// <summary>Provenance link to the originating entry (may be null once that entry is deleted).</summary>
     public Guid? SourceEntryId { get; set; }
 
-    public string SnapshotAddress { get; set; } = string.Empty;
+    public required string SnapshotAddress { get; set; }
     public double SnapshotLatitude { get; set; }
     public double SnapshotLongitude { get; set; }
     public string? SnapshotNotes { get; set; }

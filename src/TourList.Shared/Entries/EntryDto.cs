@@ -7,7 +7,7 @@ public sealed class EntryDto
 {
     public Guid Id { get; set; }
     public Guid ListId { get; set; }
-    public string RawAddress { get; set; } = string.Empty;
+    public required string RawAddress { get; set; }
     public string? FormattedAddress { get; set; }
     public string? Notes { get; set; }
     public double? Latitude { get; set; }

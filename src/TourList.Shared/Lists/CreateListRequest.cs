@@ -6,5 +6,5 @@ public sealed class CreateListRequest
 {
     [Required]
     [StringLength(200, MinimumLength = 1)]
-    public string Name { get; set; } = string.Empty;
+    public required string Name { get; set; }
 }

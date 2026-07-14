@@ -10,7 +10,7 @@ public sealed class RouteDto
 {
     public Guid Id { get; set; }
 
-    public string Name { get; set; } = string.Empty;
+    public required string Name { get; set; }
 
     public StartPointType StartPointType { get; set; } = StartPointType.CurrentLocation;
 

@@ -23,7 +23,7 @@ public sealed class MergeRouteResult
     public Guid ClientId { get; set; }
     public RouteMergeOutcome Outcome { get; set; }
     public Guid ServerRouteId { get; set; }
-    public string FinalName { get; set; } = string.Empty;
+    public required string FinalName { get; set; }
 }
 
 public sealed class MergeCounts

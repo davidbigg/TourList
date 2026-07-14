@@ -4,7 +4,7 @@ namespace TourList.Shared.Admin;
 public sealed class AdminUserDto
 {
     public Guid Id { get; set; }
-    public string Email { get; set; } = string.Empty;
+    public required string Email { get; set; }
     public bool IsAdmin { get; set; }
     public bool IsActive { get; set; }
     public int RouteCount { get; set; }

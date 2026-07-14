@@ -7,8 +7,8 @@ public sealed class LoginRequest
 {
     [Required]
     [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    public required string Email { get; set; }
 
     [Required]
-    public string Password { get; set; } = string.Empty;
+    public required string Password { get; set; }
 }

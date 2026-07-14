@@ -6,7 +6,7 @@ namespace TourList.Shared.Maps;
 /// </summary>
 public sealed class MapsTokenResponse
 {
-    public string Token { get; set; } = string.Empty;
-    public string ClientId { get; set; } = string.Empty;
+    public required string Token { get; set; }
+    public required string ClientId { get; set; }
     public DateTime ExpiresOnUtc { get; set; }
 }

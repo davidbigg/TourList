@@ -6,7 +6,7 @@ namespace TourList.Shared.Auth;
 /// </summary>
 public sealed class AuthUserDto
 {
-    public string Email { get; set; } = string.Empty;
+    public required string Email { get; set; }
 
     public IReadOnlyList<string> Roles { get; set; } = [];
 

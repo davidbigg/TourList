@@ -7,12 +7,12 @@ public sealed class ResetPasswordRequest
 {
     [Required]
     [EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    public required string Email { get; set; }
 
     [Required]
-    public string Token { get; set; } = string.Empty;
+    public required string Token { get; set; }
 
     [Required]
     [StringLength(128, MinimumLength = 8)]
-    public string NewPassword { get; set; } = string.Empty;
+    public required string NewPassword { get; set; }
 }

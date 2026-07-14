@@ -63,6 +63,21 @@ public sealed class AuthFlowTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_with_missing_required_field_is_bad_request_not_server_error()
+    {
+        var client = NewClient();
+
+        var token = await client.GetStringAsync("/api/antiforgery/token");
+        client.DefaultRequestHeaders.Add("X-XSRF-TOKEN", token);
+
+        // Body omits the `required` Password entirely — System.Text.Json can't bind it, so the
+        // model binder must surface a 400 (validation), never a 500 (unhandled deserialization).
+        var resp = await client.PostAsJsonAsync("/api/auth/login", new { Email = AdminEmail });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [Fact]
     public async Task Me_is_unauthorized_when_anonymous()
     {
         var client = NewClient();

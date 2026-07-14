@@ -20,8 +20,8 @@ public sealed class CsvGeocodeFailure
 {
     public int RowNumber { get; set; }
     public Guid EntryId { get; set; }
-    public string Address { get; set; } = string.Empty;
-    public string Reason { get; set; } = string.Empty;
+    public required string Address { get; set; }
+    public required string Reason { get; set; }
 }
 
 /// <summary>A row could not be parsed into an entry; nothing was created.</summary>
@@ -29,15 +29,15 @@ public sealed class CsvParseFailure
 {
     public int RowNumber { get; set; }
     public string? RawLine { get; set; }
-    public string Reason { get; set; } = string.Empty;
+    public required string Reason { get; set; }
 }
 
 /// <summary>A row's address duplicates another address already in the list (warning only).</summary>
 public sealed class CsvDuplicateWarning
 {
     public int RowNumber { get; set; }
-    public string Address { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
+    public required string Address { get; set; }
+    public required string Message { get; set; }
 }
 
 public sealed class CsvImportSummary
