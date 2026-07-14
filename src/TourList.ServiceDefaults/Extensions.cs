@@ -28,8 +28,27 @@ public static class Extensions
 
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
-            // Turn on resilience by default
-            http.AddStandardResilienceHandler();
+            // Turn on resilience by default. The standard handler bundles (outer→inner) a rate
+            // limiter, total-request timeout, retry, circuit breaker, and per-attempt timeout. The
+            // values below mirror the framework defaults but are set explicitly so they are tunable
+            // for production. Two invariants are enforced by the options validator:
+            //   • CircuitBreaker.SamplingDuration >= 2 × AttemptTimeout.Timeout
+            //   • TotalRequestTimeout.Timeout      >= AttemptTimeout.Timeout
+            http.AddStandardResilienceHandler(options =>
+            {
+                // Retry transient failures (5xx, 408, HttpRequestException) with jittered
+                // exponential backoff.
+                options.Retry.MaxRetryAttempts = 3;
+                options.Retry.UseJitter = true;
+
+                // Per-attempt and overall request budgets.
+                options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(10);
+                options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(30);
+
+                // Trip the circuit when >10% of calls fail across the sampling window.
+                options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+                options.CircuitBreaker.FailureRatio = 0.1;
+            });
 
             // Turn on service discovery by default
             http.AddServiceDiscovery();
