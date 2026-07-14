@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using TourList.Server.Data;
+using TourList.Server.Options;
 using TourList.Server.Services.Email;
 using TourList.Shared;
 using TourList.Shared.Auth;
@@ -21,6 +23,8 @@ public sealed class AuthController(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
     IEmailDispatcher emailSender,
+    IOptions<AcsEmailOptions> emailOptions,
+    IHostEnvironment environment,
     ILogger<AuthController> logger) : ControllerBase
 {
     [HttpPost("register")]
@@ -105,8 +109,9 @@ public sealed class AuthController(
         if (user is not null && user.IsActive)
         {
             var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            var baseUrl = ResolvePublicBaseUrl();
             var resetLink =
-                $"{Request.Scheme}://{Request.Host}/reset-password" +
+                $"{baseUrl}/reset-password" +
                 $"?email={Uri.EscapeDataString(user.Email!)}&token={Uri.EscapeDataString(token)}";
 
             await emailSender.SendPasswordResetAsync(user.Email!, resetLink);
@@ -114,6 +119,30 @@ public sealed class AuthController(
 
         // Always 200 — never reveal whether the account exists.
         return Ok();
+    }
+
+    /// <summary>
+    /// Resolves the app's public origin for the password-reset link. Prefers the configured
+    /// <see cref="AcsEmailOptions.BaseUrl"/> (authoritative); only falls back to the request origin in
+    /// local development. The Host header is attacker-controlled and must never be trusted to build a
+    /// security-sensitive link (host-header injection → reset-link poisoning / account takeover).
+    /// </summary>
+    private string ResolvePublicBaseUrl()
+    {
+        var configured = emailOptions.Value.BaseUrl?.Trim().TrimEnd('/');
+        if (!string.IsNullOrEmpty(configured))
+        {
+            return configured;
+        }
+
+        if (!environment.IsDevelopment())
+        {
+            logger.LogWarning(
+                "AcsEmail:BaseUrl is not configured; falling back to the request Host header to build the " +
+                "password-reset link. Configure AcsEmail:BaseUrl so reset links don't depend on an untrusted header.");
+        }
+
+        return $"{Request.Scheme}://{Request.Host}";
     }
 
     [HttpPost("reset-password")]
