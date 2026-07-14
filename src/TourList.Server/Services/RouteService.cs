@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TourList.Server.Data;
 using TourList.Server.Data.Entities;
@@ -44,7 +45,9 @@ public sealed class RouteService(AppDbContext db)
             return new UpsertResult(UpsertStatus.Forbidden, null);
         }
 
-        // (OwnerUserId, Name) uniqueness — enforced here (a filtered unique index is the DB backstop).
+        // Best-effort (OwnerUserId, Name) uniqueness check. This is racy (TOCTOU): a concurrent upsert
+        // can take the same name between here and SaveChanges. The filtered unique index is the real
+        // backstop — see the DbUpdateException translation below.
         var nameTaken = await db.Routes.AnyAsync(
             r => r.OwnerUserId == userId && r.Id != effectiveId && r.Name == dto.Name, ct);
         if (nameTaken)
@@ -55,9 +58,10 @@ public sealed class RouteService(AppDbContext db)
         var existingEntryIds = await ExistingEntryIdsAsync([dto], ct);
         var now = DateTime.UtcNow;
 
+        SavedRoute route;
         if (existing is null)
         {
-            var route = new SavedRoute
+            route = new SavedRoute
             {
                 Id = effectiveId == Guid.Empty ? Guid.NewGuid() : effectiveId,
                 OwnerUserId = userId,
@@ -65,15 +69,34 @@ public sealed class RouteService(AppDbContext db)
             };
             ApplyDto(route, dto, existingEntryIds, now);
             db.Routes.Add(route);
-            await db.SaveChangesAsync(ct);
-            return new UpsertResult(UpsertStatus.Ok, route.ToDto());
+        }
+        else
+        {
+            route = existing;
+            db.RouteStops.RemoveRange(existing.Stops);
+            ApplyDto(existing, dto, existingEntryIds, now);
         }
 
-        db.RouteStops.RemoveRange(existing.Stops);
-        ApplyDto(existing, dto, existingEntryIds, now);
-        await db.SaveChangesAsync(ct);
-        return new UpsertResult(UpsertStatus.Ok, existing.ToDto());
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsNameUniquenessViolation(ex))
+        {
+            // Lost the TOCTOU race: a concurrent writer committed the same (OwnerUserId, Name) after
+            // our AnyAsync check. Surface the intended 409 rather than a generic 500.
+            return new UpsertResult(UpsertStatus.NameConflict, null);
+        }
+
+        return new UpsertResult(UpsertStatus.Ok, route.ToDto());
     }
+
+    // SQL Server raises 2601 (duplicate key row in a unique index) / 2627 (unique constraint
+    // violation) when the filtered (OwnerUserId, Name) index rejects a concurrent duplicate. That
+    // index is the only one a normal upsert contends on (PKs are unique Guids), so treat it as a
+    // name conflict.
+    private static bool IsNameUniquenessViolation(DbUpdateException ex) =>
+        ex.InnerException is SqlException { Number: 2601 or 2627 };
 
     public async Task<bool> DeleteAsync(Guid userId, Guid id, CancellationToken ct)
     {
